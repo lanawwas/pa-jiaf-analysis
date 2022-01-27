@@ -1,6 +1,7 @@
 library(tidyverse)
 library(readxl)
 library(janitor)
+library(zoo)
 
 ###################
 #### DATA DIRS ####
@@ -38,30 +39,55 @@ df_ocha_clusters_overall_raw <- read_excel(
   ocha_fp,
   skip = 4,
   sheet = "Overall-District"
-) %>% mutate(population = "total")
+) %>% mutate(population = "Overall")
 
 df_ocha_clusters_in_camp_idps_raw <- read_excel(
   ocha_fp,
   skip = 4,
   sheet = "In-Camp-IDPs-District"
-) %>% mutate(population = "in-camp IDPs")
+) %>% mutate(population = "In-Camp IDPs")
 
 df_ocha_clusters_out_of_camp_idps_raw <- read_excel(
   ocha_fp,
   skip = 4,
   sheet = "Out-of-Camp-IDPs-District"
-) %>% mutate(population = "out-of-camp IDPs")
+) %>% mutate(population = "Out-of-Camp IDPs")
 
 df_ocha_clusters_returnees_raw <- read_excel(
   ocha_fp,
   skip = 4,
   sheet = "Returnees-District"
-) %>% mutate(population = "returnees")
+) %>% mutate(population = "Returnees")
+
+
+# Needs some cleaning of the header
+# https://paul.rbind.io/2019/02/01/tidying-multi-header-excel-data-with-r/
+
+sheet_name = "Gov. PIN & AcutePIN"
+
+head1 <- read_excel(ocha_fp, col_names = TRUE, sheet = sheet_name, skip = 2) %>% 
+  names() %>% 
+  str_replace("...\\d", NA_character_) %>%
+  tibble %>% 
+  mutate(head1 = zoo::na.locf0(head1)) %>% 
+  pull()
+
+head2 <- read_excel(ocha_fp, col_names = TRUE, sheet = sheet_name, skip = 3) %>% 
+  names() %>%
+ str_remove("...\\d+")
+
+headers <- map_chr(1:length(head1), ~ {
+  case_when(
+    !is.na(head1[.x]) & !is.na(head2[.x]) ~ paste(head1[.x], head2[.x], sep = "_"),
+    TRUE ~ head2[.x]
+  )
+})
 
 df_ocha_is_raw <- read_excel(
   ocha_fp, 
-  skip = 3,
-  sheet = "Gov. PIN & AcutePIN"
+  skip = 4,
+  sheet = "Gov. PIN & AcutePIN",
+  col_names = headers
   )
 
 ########################
@@ -99,7 +125,11 @@ df_ocha_clusters <- df_ocha_clusters_raw %>%
 # Pivoting the IS table
 # Actually first need to fix the column names
 df_ocha_is <- df_ocha_is_raw %>%
-  pivot_longer()
+  rename_with( ~ gsub("(\\w+)_(\\w+)", "\\2_\\1", .x)) %>%
+  pivot_longer(cols=starts_with("Population") | starts_with("PIN") | starts_with("Acute PIN"),
+               names_to = c(".value", "population"),
+               names_pattern="(\\w+)_(\\w+)")
+               
 
 # ocha provided cluster pins
 
