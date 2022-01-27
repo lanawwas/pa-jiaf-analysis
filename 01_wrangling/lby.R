@@ -96,7 +96,7 @@ df_ocha_is <- df_ocha_is_raw %>%
   ) %>%
   left_join(
     df_pcodes,
-    by = c("mantika", "baladiya")
+    by = c("mantika" = "adm2_en", "baladiya" = "adm3_en")
   ) %>%
   select(-key, -mantika, -baladiya) %>%
   mutate(
