@@ -1,0 +1,200 @@
+library(tidyverse)
+library(readxl)
+library(janitor)
+
+###################
+#### DATA DIRS ####
+###################
+
+data_dir <- Sys.getenv("JIAF_DATA_DIR")
+
+ocha_dir <- file.path(
+  data_dir,
+  "Data from country offices - OCHA",
+  "Libya"
+)
+
+cluster_dir <- file.path(
+  data_dir,
+  "Data from country offices - Clusters",
+  "Libya"
+)
+
+save_dir <- file.path(
+  data_dir,
+  "Data aggregated for analysis"
+)
+
+############################
+#### OCHA PROVIDED DATA ####
+############################
+
+ocha_fp <- file.path(
+  ocha_dir,
+  "libya-2022-hpc-intersectoral-and-sectoral-targets-and-pin-2022_15nov2021.xlsx"
+)
+
+df_ocha_clusters_raw <- read_excel(ocha_fp, sheet = "Consolidated PiN 2022 (sectors)")
+df_ocha_is_raw <- read_excel(ocha_fp, sheet = "Intersectoral PiN 2022")
+
+###############################
+#### CLUSTER PROVIDED DATA ####
+###############################
+
+# Education file has no relevant PiN
+
+df_gbv_raw <- read_excel(
+  file.path(
+    cluster_dir,
+    "20210824_Libya_2022_HNO_PiN_FINAL GBV.xlsx"
+  ),
+  sheet = "GBV_PiN",
+  skip = 14
+)
+
+df_fs_raw <- read_excel(
+  file.path(
+    cluster_dir,
+    "Libya 2022 FS.xlsx"
+  ),
+  sheet = "Sector PiN and Severity",
+  skip = 2
+)
+
+########################
+#### DATA WRANGLING ####
+########################
+# one code to bring them all
+
+# saving pcodes and names to ensure unique names at end
+
+df_pcodes <- df_ocha_clusters_raw %>%
+  select(
+    adm2_en = `ADM2_Manti (EN)`,
+    adm3_en = Balad_ADM3,
+    ends_with("Pcode")
+  ) %>%
+  rename_with(tolower) %>%
+  distinct()
+
+# intersectoral pins
+
+names(df_ocha_is_raw) <- make_clean_names(names(df_ocha_is_raw))
+
+df_ocha_is <- df_ocha_is_raw %>%
+  slice(-1) %>%
+  type_convert() %>%
+  pivot_longer(
+    matches("male"),
+    names_to = c("sex", "age"),
+    names_sep = "(?<=e)_",
+    values_to = "pin"
+  ) %>%
+  left_join(
+    df_pcodes,
+    by = c("mantika", "baladiya")
+  ) %>%
+  select(-key, -mantika, -baladiya) %>%
+  mutate(
+    source = "ocha",
+    sector = "intersectoral",
+    .before = 1
+  )
+
+# ocha provided cluster pins
+
+names(df_ocha_clusters_raw) <- make_clean_names(names(df_ocha_clusters_raw))
+
+df_ocha_clusters <- df_ocha_clusters_raw %>%
+  select(
+    sector,
+    ends_with("pcode"),
+    population_group,
+    matches("male")) %>%
+  pivot_longer(
+    matches("male"),
+    names_to = c("sex", "age"),
+    names_sep = "(?<=e)_",
+    values_to = "pin"
+  ) %>%
+  mutate(
+    source = "ocha",
+    .before = 1
+  )
+
+# cluster provided pins
+
+names(df_gbv_raw) <- make_clean_names(names(df_gbv_raw))
+
+df_gbv <- df_gbv_raw %>%
+  select(
+    adm2_pcode = mantika_pcode,
+    adm3_pcode = baladiya_p_code,
+    population_group,
+    ends_with("pi_n")
+  ) %>%
+  pivot_longer(
+    ends_with("pi_n"),
+    names_to = c("sex", "age"),
+    names_pattern = "(.*)(?<=e)_(.*)_pi_n",
+    values_to = "pin"
+  ) %>%
+  mutate(
+    source = "cluster",
+    sector = "GBV",
+    .before = 1
+  )
+
+names(df_fs_raw) <- make_clean_names(names(df_fs_raw))
+
+df_fs <- df_fs_raw %>%
+  select(
+    sector,
+    ends_with("pcode"),
+    population_group,
+    matches("male")
+  ) %>%
+  pivot_longer(
+    matches("male"),
+    names_to = c("sex", "age"),
+    names_sep = "(?<=e)_",
+    values_to = "pin"
+  ) %>%
+  mutate(
+    source = "cluster",
+    .before = 1
+  )
+
+############################
+#### GENERATE FULL DATA ####
+############################
+# and in the darkness bind them
+
+df_lby <- bind_rows(
+  df_ocha_clusters,
+  df_ocha_is,
+  df_fs,
+  df_gbv
+) %>%
+  left_join(
+    df_pcodes,
+    by = c("adm2_pcode", "adm3_pcode")
+  ) %>%
+  select(
+    source:adm2_pcode,
+    adm2_en,
+    adm3_pcode,
+    adm3_en,
+    population_group:pin
+  ) %>%
+  mutate(adm0_pcode = "LBY",
+         adm0_en = "Libya",
+         .before = adm2_pcode)
+  
+write_csv(
+  df_lby,
+  file.path(
+    save_dir,
+    "lby_pins_2022.csv"
+  )
+)
