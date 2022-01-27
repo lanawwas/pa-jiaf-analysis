@@ -31,10 +31,14 @@ save_dir <- file.path(
 
 ocha_fp <- file.path(
   ocha_dir,
-  "libya-2022-hpc-intersectoral-and-sectoral-targets-and-pin-2022_15nov2021.xlsx"
+  "libya-2022-hpc-intersectoral-and-sectoral-targets-and-pin-2022_15nov2021.xlsx" # nolint
 )
 
-df_ocha_clusters_raw <- read_excel(ocha_fp, sheet = "Consolidated PiN 2022 (sectors)")
+df_ocha_clusters_raw <- read_excel(
+  ocha_fp,
+  sheet = "Consolidated PiN 2022 (sectors)"
+)
+
 df_ocha_is_raw <- read_excel(ocha_fp, sheet = "Intersectoral PiN 2022")
 
 ###############################
@@ -110,7 +114,8 @@ df_ocha_clusters <- df_ocha_clusters_raw %>%
     sector,
     ends_with("pcode"),
     population_group,
-    matches("male")) %>%
+    matches("male")
+  ) %>%
   pivot_longer(
     matches("male"),
     names_to = c("sex", "age"),
@@ -187,10 +192,12 @@ df_lby <- bind_rows(
     adm3_en,
     population_group:pin
   ) %>%
-  mutate(adm0_pcode = "LBY",
-         adm0_en = "Libya",
-         .before = adm2_pcode)
-  
+  mutate(
+    adm0_pcode = "LBY",
+    adm0_en = "Libya",
+    .before = adm2_pcode
+  )
+
 write_csv(
   df_lby,
   file.path(
