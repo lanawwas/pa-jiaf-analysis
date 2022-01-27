@@ -198,10 +198,10 @@ df_lby <- bind_rows(
     .before = adm2_pcode
   )
 
-write_csv(
-  df_lby,
-  file.path(
-    save_dir,
-    "lby_pins_2022.csv"
-  )
-)
+# write_csv(
+#   df_lby,
+#   file.path(
+#     save_dir,
+#     "lby_pins_2022.csv"
+#   )
+# )
