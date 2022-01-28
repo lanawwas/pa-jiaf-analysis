@@ -83,9 +83,8 @@ df_pcodes <- df_ocha_clusters_raw %>%
 
 # intersectoral pins
 
-names(df_ocha_is_raw) <- make_clean_names(names(df_ocha_is_raw))
-
 df_ocha_is <- df_ocha_is_raw %>%
+  clean_names() %>%
   slice(-1) %>%
   type_convert() %>%
   pivot_longer(
@@ -107,9 +106,8 @@ df_ocha_is <- df_ocha_is_raw %>%
 
 # ocha provided cluster pins
 
-names(df_ocha_clusters_raw) <- make_clean_names(names(df_ocha_clusters_raw))
-
 df_ocha_clusters <- df_ocha_clusters_raw %>%
+  clean_names() %>%
   select(
     sector,
     ends_with("pcode"),
@@ -129,9 +127,8 @@ df_ocha_clusters <- df_ocha_clusters_raw %>%
 
 # cluster provided pins
 
-names(df_gbv_raw) <- make_clean_names(names(df_gbv_raw))
-
 df_gbv <- df_gbv_raw %>%
+  clean_names() %>%
   select(
     adm2_pcode = mantika_pcode,
     adm3_pcode = baladiya_p_code,
@@ -150,9 +147,8 @@ df_gbv <- df_gbv_raw %>%
     .before = 1
   )
 
-names(df_fs_raw) <- make_clean_names(names(df_fs_raw))
-
 df_fs <- df_fs_raw %>%
+  clean_names() %>%
   select(
     sector,
     ends_with("pcode"),
