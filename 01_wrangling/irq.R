@@ -3,35 +3,21 @@ library(readxl)
 library(janitor)
 library(zoo)
 
+# helper functions to get paths
+source(here::here("99_helpers", "helpers.R"))
+
 ###################
 #### DATA DIRS ####
 ###################
 
-data_dir <- Sys.getenv("JIAF_DATA_DIR")
-
-ocha_dir <- file.path(
-  data_dir,
-  "Data from country offices - OCHA",
-  "Iraq"
-)
-
-cluster_dir <- file.path(
-  data_dir,
-  "Data from country offices - Clusters",
-  "Iraq"
-)
-
-save_dir <- file.path(
-  data_dir,
-  "Data aggregated for analysis"
-)
+file_paths <- get_paths("Iraq")
 
 ############################
 #### OCHA PROVIDED DATA ####
 ############################
 
 ocha_fp <- file.path(
-  ocha_dir,
+  file_paths$ocha_dir,
   "Iraq 2022 HNO Final Intersectoral & Cluster PIN Estimates - Updated 20211129.xlsx"
 )
 
@@ -169,9 +155,6 @@ df_irq <- bind_rows(
   )
 
 # write_csv(
-#   df_lby,
-#   file.path(
-#     save_dir,
-#     "irq_pins_2022.csv"
-#   )
+#   df_irq,
+#   file_paths$save_path
 # )
