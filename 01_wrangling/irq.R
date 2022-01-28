@@ -77,15 +77,6 @@ df_ocha_is_raw <- df_ocha_is_raw %>%
 ########################
 # one code to bring them all
 
-# saving pcodes and names to ensure unique names at end
-df_pcodes <- df_ocha_clusters_overall_raw %>%
-  select(
-    adm1_pcode = admin1Pcode,
-    adm2_pcode = admin2Pcode,
-    adm1_en = gov_name,
-    adm2_en = dist_name,
-  ) %>%
-  distinct()
 
 # Do a vertical join before pviot
 df_ocha_clusters_raw <- bind_rows(
@@ -111,6 +102,15 @@ df_ocha_clusters <- df_ocha_clusters_raw %>%
   ) %>%
   drop_na(adm1_en) %>%
   mutate(adm1_en = na_if(adm1_en, "Total"))
+
+# Pcodes needed for IS table,
+# but only admin 1
+df_pcodes <- df_ocha_clusters_overall_raw %>%
+  select(
+    adm1_pcode = admin1Pcode,
+    adm1_en = gov_name,
+  ) %>%
+  distinct()
 
 # Pivoting the IS table
 # Actually first need to fix the column names
