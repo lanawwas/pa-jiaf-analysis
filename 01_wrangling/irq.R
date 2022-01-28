@@ -49,33 +49,28 @@ df_ocha_clusters_returnees_raw <- read_excel(
 # Needs some cleaning of the header
 # https://paul.rbind.io/2019/02/01/tidying-multi-header-excel-data-with-r/
 
-sheet_name <- "Gov. PIN & AcutePIN"
+df_ocha_is_raw <- read_excel(ocha_fp,
+  col_names = TRUE, sheet = "Gov. PIN & AcutePIN", skip = 2
+)
 
-head1 <- read_excel(ocha_fp, col_names = TRUE, sheet = sheet_name, skip = 2) %>%
-  names() %>%
-  str_replace("...\\d", NA_character_)
+head1 <- names(df_ocha_is_raw) %>%
+  str_replace("...\\d", NA_character_) %>%
+  zoo::na.locf0()
 
-head1 <- tibble(head1) %>%
-  mutate(head1 = zoo::na.locf0(head1)) %>%
-  pull()
+head2 <- df_ocha_is_raw[1, ] %>%
+  unlist(use.names = F)
 
-head2 <- read_excel(ocha_fp, col_names = TRUE, sheet = sheet_name, skip = 3) %>%
-  names() %>%
-  str_remove("...\\d+")
+headers <- ifelse(
+  !is.na(head1),
+  paste(head1, head2, sep = "_"),
+  head2
+)
 
-headers <- map_chr(1:length(head1), ~ {
-  case_when(
-    !is.na(head1[.x]) & !is.na(head2[.x]) ~ paste(head1[.x], head2[.x], sep = "_"),
-    TRUE ~ head2[.x]
-  )
-})
-
-df_ocha_is_raw <- read_excel(
-  ocha_fp,
-  skip = 4,
-  sheet = "Gov. PIN & AcutePIN",
-  col_names = headers
-) %>% mutate(sector = "all")
+df_ocha_is_raw <- df_ocha_is_raw %>%
+  rename_with(~headers) %>%
+  slice(-1) %>%
+  type_convert() %>%
+  mutate(sector = "all")
 
 ########################
 #### DATA WRANGLING ####
@@ -101,42 +96,33 @@ df_ocha_clusters_raw <- bind_rows(
 )
 
 
-# Pivot to make clusters and PINs
+# Pivot to make clusters and PINs,
+# drop strange empty columns
 df_ocha_clusters <- df_ocha_clusters_raw %>%
-  # Swap the prefix & suffix of the column names, so that pivot longer
-  # works the right way
-  rename_with(~ gsub("(\\w+)_(pin|acute|sev)", "\\2_\\1", .x)) %>%
   pivot_longer(
-    cols = starts_with("pin") | starts_with("acute") | starts_with("sev"),
-    names_to = c(".value", "sector"),
+    cols = ends_with("pin") | ends_with("acute") | ends_with("sev"),
+    names_to = c("sector", ".value"),
     names_pattern = "(\\w+)_(\\w+)"
   ) %>%
-  # Drop unused columns
-  select(-"mcna", -"pop_num", -"pop_sch", -"pop_0-17", -"acute", -"sev") %>%
+  select(-c(mcna, pop_num, pop_sch, `pop_0-17`, acute, sev)) %>%
   rename(
     adm1_pcode = admin1Pcode, adm2_pcode = admin2Pcode,
     adm1_en = gov_name, adm2_en = dist_name
   ) %>%
-  # There are some weird duplicate rows with no data, drop them
   drop_na(adm1_en) %>%
   mutate(adm1_en = na_if(adm1_en, "Total"))
 
 # Pivoting the IS table
 # Actually first need to fix the column names
 df_ocha_is <- df_ocha_is_raw %>%
-  rename_with(~ gsub("(.*)_(.*)", "\\2_\\1", .x)) %>%
   pivot_longer(
-    cols = starts_with("Population") | starts_with("PIN") | starts_with("Acute PIN"),
-    names_to = c(".value", "population_group"),
+    cols = ends_with("Population") | ends_with("PIN") | ends_with("Acute PIN"),
+    names_to = c("population_group", ".value"),
     names_pattern = "(.*)_(.*)"
   ) %>%
-  # Rename PIN column to match other data, goverornate to join with pcodes
   rename(pin = PIN, adm1_en = Governorate) %>%
-  # Get the admin regions
-  left_join(df_pcodes) %>%
-  # Drop columns that aren't required
-  select(-"Population", -"Acute PIN") %>%
-  # Remove "total" from adm1_en
+  left_join(df_pcodes, by = "adm1_en") %>%
+  select(-c(Population, `Acute PIN`)) %>%
   mutate(adm1_en = na_if(adm1_en, "Total"))
 
 ############################
