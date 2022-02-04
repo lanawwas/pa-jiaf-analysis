@@ -76,7 +76,7 @@ df_ocha <- df_ocha_raw %>%
   pivot_longer(
     cols = ends_with("pin") | ends_with("acute") | ends_with("sev"),
     names_to = c("sector", ".value"),
-    names_pattern = "(\\w+)_(\\w+)"
+    names_sep = "_"
   ) %>%
   select(-c(mcna, pop_num, pop_sch, `pop_0-17`, acute, sev)) %>%
   drop_na(adm1_en) %>%
