@@ -12,10 +12,10 @@ file_paths <- get_paths("Nigeria")
 #### OCHA PROVIDED DATA ####
 ############################
 
-fp_ocha = file.path(
-    file_paths$ocha_dir,
-    "Nigeria HPC 2022 projected_PIN_All_Data_Shared.xlsx"
-  )
+fp_ocha <- file.path(
+  file_paths$ocha_dir,
+  "Nigeria HPC 2022 projected_PIN_All_Data_Shared.xlsx"
+)
 
 df_ocha_raw <- read_excel(
   fp_ocha,
@@ -23,7 +23,7 @@ df_ocha_raw <- read_excel(
   range = ("A2:R67"),
 )
 
-df_ocha_clusters = df_ocha_raw %>%
+df_ocha_clusters <- df_ocha_raw %>%
   select(adm2_en = LGA, WASH:`PRO-HLP`) %>%
   pivot_longer(
     cols = WASH:`PRO-HLP`,
@@ -55,11 +55,12 @@ df_pcodes <- read_excel(
   skip = 1
 ) %>%
   select(
-      adm1_pcode = `state Pcode`,
-      adm1_en = State,
-      adm2_pcode = `LGA pcode`,
-      adm2_en = LGA
-  ) %>% unique()
+    adm1_pcode = `state Pcode`,
+    adm1_en = State,
+    adm2_pcode = `LGA pcode`,
+    adm2_en = LGA
+  ) %>%
+  unique()
 
 ######################
 #### CLUSTER DATA ####
