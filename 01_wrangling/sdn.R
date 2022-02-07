@@ -21,7 +21,8 @@ df_ocha_raw <- read_excel(
   skip = 6
 ) %>%
   rename_all(tolower) %>%
-  rename(adm1_en = adm1, adm2_pcode = pcode, adm2_en = adm2)
+  rename(adm2_pcode = pcode) %>%
+  drop_na(adm2_pcode)
 
 df_ocha_clusters <- df_ocha_raw %>%
   select(-c(pin, sev)) %>%
@@ -31,12 +32,12 @@ df_ocha_clusters <- df_ocha_raw %>%
     names_sep = "_",
   ) %>%
   select(
-    adm1_en, adm2_pcode, adm2_en, sector, population_group,
-    condition, pin
-  )
+    adm2_pcode, sector, population_group, condition, pin
+  ) %>%
+  mutate(pin = ifelse(is.na(pin), 0, pin))
 
 df_ocha_is <- df_ocha_raw %>%
-  select(adm1_en, adm2_pcode, adm2_en, pin) %>%
+  select(adm2_pcode, pin) %>%
   mutate(
     pin = as.numeric(pin), sector = "intersectoral",
     population_group = "all", condition = "all"
@@ -46,8 +47,7 @@ df_ocha <- bind_rows(
   df_ocha_clusters,
   df_ocha_is
 ) %>%
-  mutate(source = "ocha", .before = 1) %>%
-  drop_na(adm2_pcode)
+  mutate(source = "ocha", .before = 1)
 
 ######################
 #### CLUSTER DATA ####
@@ -59,40 +59,22 @@ gbv_fp <- file.path(
   "20210927_Sudan_2022_HNO_PiN_FINAL GBV.xlsx"
 )
 
-df_gbv_idp <- read_excel(
-  gbv_fp,
-  sheet = "IDPs",
-  skip = 18
-) %>% mutate(population_group = "idp")
-df_gbv_vul <- read_excel(
-  gbv_fp,
-  sheet = "Returnees",
-  skip = 18
-) %>% mutate(population_group = "ret")
-df_gbv_ret <- read_excel(
-  gbv_fp,
-  sheet = "Vulnerable Hosts",
-  skip = 18
-) %>% mutate(population_group = "vul")
-df_gbv_all <- read_excel(
-  gbv_fp,
-  sheet = "Overall",
-  skip = 18
-) %>% mutate(population_group = "all")
-
-df_gbv <- bind_rows(
-  df_gbv_idp,
-  df_gbv_vul,
-  df_gbv_ret,
-  df_gbv_all
-) %>%
-  rename(
-    adm1_en = state_name,
-    adm1_pcode = admin1Pcode,
-    adm2_en = Locality_name,
-    adm2_pcode = admin2Pcode
+df_gbv <- purrr::map2_dfr(
+  c("IDPs", "Returnees", "Vulnerable Hosts", "Overall"),
+  c("idp", "ret", "vul", "all"),
+  ~ read_excel(
+    gbv_fp,
+    sheet = .x,
+    skip = 18
   ) %>%
-  select(adm1_en, adm1_pcode, adm2_en, adm2_pcode, pin) %>%
+    rename_all(tolower) %>%
+    mutate(population_group = .y)
+) %>%
+  select(
+    adm2_pcode = admin2pcode,
+    pin
+  ) %>%
+  drop_na(adm2_pcode) %>%
   mutate(sector = "gbv", condition = "all")
 
 # Education
@@ -103,20 +85,17 @@ df_edu_raw <- read_excel(
   ),
   sheet = "EDU", skip = 15
 ) %>%
-  rename_all(tolower) %>%
-  rename(
-    adm1_pcode = `p-code admin1`,
-    adm1_en = state,
-    adm2_pcode = `pcode admin2`,
-    adm2_en = locality,
-    edu_pin_all = edu_pin
-  ) %>%
-  select(
-    adm1_pcode, adm1_en, adm2_pcode, adm2_en,
-    edu_pin_all, edu_pin_idp, edu_pin_ret, edu_pin_vul, edu_pin_ref
-  )
+  rename_all(tolower)
 
-df_edu <- df_edu_raw %>%
+ 
+df_edu = df_edu_raw %>% select(
+    adm2_pcode = `pcode admin2`,
+    edu_pin_all = edu_pin,
+    edu_pin_idp,
+    edu_pin_ret,
+    edu_pin_vul,
+    edu_pin_ref
+  )  %>%
   pivot_longer(
     cols = contains("_pin_"),
     names_to = c("sector", ".value", "population_group"),
@@ -131,31 +110,32 @@ df_clusters <- bind_rows(
 ) %>% mutate(source = "cluster")
 
 
-####################
-### FILL PCODES ####
-####################
+###############
+### PCODES ####
+###############
 
-# OCHA data missing admin1 pcodes, use the edu data to add them
+# OCHA data missing admin1 pcodes, use the edu data instead
 
-df_pcodes <- df_edu %>%
-  select(adm1_pcode, adm1_en) %>%
+df_pcodes <- df_edu_raw %>%
+   select(
+    adm1_pcode = `p-code admin1`,
+    adm1_en = state,
+    adm2_pcode = `pcode admin2`,
+    adm2_en = locality) %>%
   unique()
-
-df_ocha_pcoded <- df_ocha %>%
-  left_join(df_pcodes,
-    by = "adm1_en"
-  ) %>%
-  relocate(adm1_pcode, .before = adm1_en)
-
 
 ############################
 #### GENERATE FULL DATA ####
 ############################
 
 df_sdn <- bind_rows(
-  df_ocha_pcoded,
+  df_ocha,
   df_clusters,
 ) %>%
+  left_join(df_pcodes,
+    by = "adm2_pcode"
+  ) %>%
+  relocate(adm1_pcode, .before = adm1_en) %>% 
   mutate(
     adm0_pcode = "SDN",
     adm0_en = "Sudan",
