@@ -87,15 +87,16 @@ df_edu_raw <- read_excel(
 ) %>%
   rename_all(tolower)
 
- 
-df_edu = df_edu_raw %>% select(
+
+df_edu <- df_edu_raw %>%
+  select(
     adm2_pcode = `pcode admin2`,
     edu_pin_all = edu_pin,
     edu_pin_idp,
     edu_pin_ret,
     edu_pin_vul,
     edu_pin_ref
-  )  %>%
+  ) %>%
   pivot_longer(
     cols = contains("_pin_"),
     names_to = c("sector", ".value", "population_group"),
@@ -117,11 +118,12 @@ df_clusters <- bind_rows(
 # OCHA data missing admin1 pcodes, use the edu data instead
 
 df_pcodes <- df_edu_raw %>%
-   select(
-    adm1_pcode = `p-code admin1`,
+  select(
     adm1_en = state,
-    adm2_pcode = `pcode admin2`,
-    adm2_en = locality) %>%
+    adm1_pcode = `p-code admin1`,
+    adm2_en = locality,
+    adm2_pcode = `pcode admin2`
+  ) %>%
   unique()
 
 ############################
@@ -133,13 +135,13 @@ df_sdn <- bind_rows(
   df_clusters,
 ) %>%
   left_join(df_pcodes,
-    by = "adm2_pcode"
+    by = "adm2_pcode",
   ) %>%
-  relocate(adm1_pcode, .before = adm1_en) %>% 
+  relocate(adm1_en:adm2_en, .before = adm2_pcode) %>%
   mutate(
-    adm0_pcode = "SDN",
     adm0_en = "Sudan",
-    .before = adm1_pcode,
+    adm0_pcode = "SDN",
+    .before = adm1_en,
     pin = replace_na(pin, 0)
   )
 
