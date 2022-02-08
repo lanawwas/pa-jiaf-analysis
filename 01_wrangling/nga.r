@@ -1,5 +1,6 @@
 library(tidyverse)
 library(readxl)
+library(janitor)
 
 ###################
 #### DATA DIRS ####
@@ -69,18 +70,55 @@ df_pcodes <- read_excel(
 ######################
 
 # Shelter & NFIs
-df_shelter = read_excel(
+df_shelter <- read_excel(
   file.path(
     file_paths$cluster_dir,
     "Nigeria_2022 ESNFI PiN & Target_01122021.xlsx"
   ),
-  sheet = "PiN Breakdown Type"
-) %>% 
+  sheet = "PiN Breakdown Type",
+  range = "A1:G66"
+) %>%
+  clean_names() %>%
   select(
-    adm2_en = LGA,
-    PIN = `Total Population`
-  ) %>% drop_na() %>%
-mutate(sector = "Shelter & NFIs")
+    adm2_en = lga,
+    id_ps:inaccessible) %>%
+  pivot_longer(
+    cols = -adm2_en,
+    names_to = "population_group",
+    values_to = "pin"
+  ) %>%
+  mutate(population_group = ifelse(population_group == "id_ps",
+                                   "idps",
+                                   population_group),
+         sector = "Shelter & NFIs")
+  
+
+# Education
+df_edu <- read_excel(
+  file.path(
+    file_paths$cluster_dir,
+    "Nigeria - Sector_PiN_SAAD.xlsx"
+  ),
+  sheet = "theData",
+  skip = 2
+) %>%
+  clean_names() %>%
+  select(
+    adm2_en = lga,
+    total_id_ps:total_host_community
+  ) %>%
+  pivot_longer(
+    -adm2_en,
+    names_to = "population_group",
+    values_to = "pin"
+  ) %>%
+  mutate(
+    population_group = case_when(
+      population_group == "total_id_ps" ~ "idps",
+      TRUE ~ str_match(population_group, "total_(.*)")[,2]
+    ),
+    sector = "Education"
+  )
 
 # Combine clusters
 df_clusters <- df_shelter %>% 
@@ -98,14 +136,16 @@ df_nga <- bind_rows(
     by = "adm2_en",
   ) %>%
   relocate(adm1_pcode:adm2_pcode, .before = adm2_en) %>%
-  drop_na("adm1_en") %>%
   mutate(
     adm0_en = "Nigeria",
     adm0_pcode = "nga",
     .before = adm1_pcode,
+  ) %>%
+  mutate(
+    population_group = replace_na(population_group, "all")
   )
 
-# write_csv(
-#   df_nga,
-#   file_paths$save_path
-# )
+write_csv(
+  df_nga,
+  file_paths$save_path
+)
