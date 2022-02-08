@@ -142,7 +142,6 @@ df_sdn <- bind_rows(
     adm0_en = "Sudan",
     adm0_pcode = "SDN",
     .before = adm1_en,
-    pin = replace_na(pin, 0)
   )
 
 # write_csv(
