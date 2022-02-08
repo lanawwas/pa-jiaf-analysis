@@ -21,10 +21,12 @@ df_ocha_raw <- read_excel(
   fp_ocha,
   sheet = "PiN_LGA_Sectors",
   range = ("A2:R67"),
+) %>% mutate(
+  LGA = LGA %>% str_replace("Abandam", "Abadam")
 )
 
 df_ocha_clusters <- df_ocha_raw %>%
-  select(adm2_en = LGA, WASH:`PRO-HLP`) %>%
+  select(adm2_en= LGA, WASH:`PRO-HLP`) %>%
   pivot_longer(
     cols = WASH:`PRO-HLP`,
     names_to = "sector",
@@ -66,17 +68,37 @@ df_pcodes <- read_excel(
 #### CLUSTER DATA ####
 ######################
 
-# No cluster data
+# Shelter & NFIs
+df_shelter = read_excel(
+  file.path(
+    file_paths$cluster_dir,
+    "Nigeria_2022 ESNFI PiN & Target_01122021.xlsx"
+  ),
+  sheet = "PiN Breakdown Type"
+) %>% 
+  select(
+    adm2_en = LGA,
+    PIN = `Total Population`
+  ) %>% drop_na() %>%
+mutate(sector = "Shelter & NFIs")
+
+# Combine clusters
+df_clusters <- df_shelter %>% 
+  mutate(source = "cluster")
+
 
 ############################
 #### GENERATE FULL DATA ####
 ############################
 
-df_nga <- df_ocha %>%
+df_nga <- bind_rows(
+  df_ocha,
+  df_clusters)%>%
   left_join(df_pcodes,
     by = "adm2_en",
   ) %>%
   relocate(adm1_pcode:adm2_pcode, .before = adm2_en) %>%
+  drop_na("adm1_en") %>%
   mutate(
     adm0_en = "Nigeria",
     adm0_pcode = "nga",
