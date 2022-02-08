@@ -33,11 +33,14 @@ df_ocha_clusters <- read_excel(
     values_to = "pin"
   ) %>%
   mutate(
-    pin = pin %>% str_replace("\\s*\\(.+\\)", "")
-      %>% str_replace(",", "") %>%
-      str_replace("K", "e3") %>%
-      str_replace("[^0-9.e]", "") %>%
-      as.numeric(),
+    pin = pin %>%
+      str_replace_all(
+        pattern = c(
+          "(?<!,[0-9]{1})K" = "e3",
+          "K" = "00"
+        )
+      ) %>%
+      parse_number(),
     adm2_en = case_when(
       adm2_en == "Area A&B" ~ "Area A & B",
       adm2_en == "EJ" ~ "East Jerusalem",
@@ -205,7 +208,7 @@ df_pse <- bind_rows(
     .before = adm1_en,
   )
 
-# write_csv(
-#   df_pse,
-#   file_paths$save_path
-# )
+write_csv(
+  df_pse,
+  file_paths$save_path
+)
