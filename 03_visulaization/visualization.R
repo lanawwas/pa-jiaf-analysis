@@ -27,7 +27,7 @@ df_pins <- read.csv(
     ),
   )
 
-p <- ggplot(df_pins, aes(
+ggplot(df_pins, aes(
   fill = sector_group, y = pin, x = adm0_pcode,
   label = ifelse(percent_diff == 0, "",
     paste0(round(percent_diff, digits = 0), "%")
@@ -41,7 +41,9 @@ p <- ggplot(df_pins, aes(
     x = "Country ISO3",
     y = "PIN"
   ) +
-  scale_y_continuous(label = comma)
+  scale_y_continuous(label = comma) +
+  theme_minimal()
+
 ggsave(file.path(save_path, "2022_hno_pin_totals.png"))
 
 # Plot the contribs
@@ -60,7 +62,7 @@ df_contrib <- read.csv(
 
 ggplot(
   df_contrib %>% filter(sector_group == "sectoral", pin_pct > 0),
-  aes(x = fct_inorder(max_sector), y = pin_pct, label = max_sector)
+  aes(x = fct_rev(fct_inorder(max_sector)), y = pin_pct, label = max_sector)
 ) +
   geom_bar(
     position = "dodge", stat = "identity", show.legend = FALSE,
@@ -72,6 +74,27 @@ ggplot(
   theme(axis.text.y = element_text(size = 2)) +
   labs(
     x = "sector",
-    y = "% contribution to sectoral PIN"
-  )
+    y = "% contribution to intersectoral PIN"
+  ) +
+  theme_minimal()
+
 ggsave(file.path(save_path, "2022_hno_pin_contributions.png"))
+
+# difference with intersectoral
+df_pins %>%
+  filter(sector_group == "JIAF 2.0") %>%
+  ggplot(
+    aes(
+      y = fct_reorder(adm0_pcode, percent_diff), x = percent_diff
+    )
+  ) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(
+    x = "% difference",
+    y = "Country",
+    title = "% difference, 2023 HPC and 2022 actual",
+    subtitle = "Intersectoral PiN calculations"
+  )
+
+ggsave(file.path(save_path, "2022_hno_pct_difference.png"))
