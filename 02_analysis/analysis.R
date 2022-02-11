@@ -65,6 +65,7 @@ max_df <- df %>%
     sector_group
   ) %>%
   summarize(
+    lowest_adm_level = unique(adm_level),
     max_pin = max(pin),
     max_sector = paste(sector[pin == max_pin], collapse = ", "),
     .groups = "drop"
@@ -106,6 +107,11 @@ pin_df <- max_df %>%
     sector_group,
   ) %>%
   summarize(
+    lowest_adm_level = unique(lowest_adm_level),
+    number_disagg = grepl(
+      "[^\\s]",
+      pop_group[1]
+    ) + str_count(pop_group[1], ","),
     pin = sum(max_pin),
     .groups = "drop"
   )
