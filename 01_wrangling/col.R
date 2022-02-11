@@ -140,19 +140,31 @@ df_pcodes <- df_ocha_raw %>%
     adm0_pcode = "COL"
   )
 
-# get all ocha provided data in one file
+# Get all ocha provided data in one file.
+# Need to rename to ensure severity sector
+# names match pin by removing proteccion.
+# Also, only consider intersectoral pin
+# when severity >= 3
+# TODO: confirm sectoral PiN and severity
+# analysis needs (waiting for Kashif)
 df_ocha <- df_ocha_raw %>%
+  rename_with(
+    ~ str_replace(.x, "_proteccion_", "_")
+  ) %>%
   pivot_longer(
-    cols = starts_with("pin"),
-    names_to = c("sector"),
-    names_prefix = "pin_",
-    values_to = "pin"
+    cols = matches("^pin|^sever"),
+    names_to = c(".value", "sector"),
+    names_pattern = "(^severidad|^pin)_(.*)"
   ) %>%
   transmute(
     source = "ocha",
     sector,
     adm2_file_code = codigo_divipola,
-    pin
+    pin = ifelse(
+      severidad >= 3,
+      pin,
+      0
+    )
   )
 
 # cluster provided data
