@@ -85,16 +85,30 @@ df_pins %>%
   filter(sector_group == "JIAF 2.0") %>%
   ggplot(
     aes(
-      y = fct_reorder(adm0_pcode, percent_diff), x = percent_diff
+      y = fct_reorder(adm0_pcode, percent_diff),
+      x = percent_diff,
+      fill = number_disagg
     )
   ) +
   geom_bar(stat = "identity") +
   theme_minimal() +
+  scale_fill_gradient(
+    low = "#F6BDC0",
+    high = "#EA4C46"
+  ) +
   labs(
     x = "% difference",
     y = "Country",
     title = "% difference, 2023 HPC and 2022 actual",
-    subtitle = "Intersectoral PiN calculations"
+    subtitle = "Intersectoral PiN calculations",
+    fill = "Number of\ndisaggregations"
+  ) +
+  geom_text(
+    y = "COL",
+    x = 30,
+    label = "Colombia PiN difference due\nto incorporation of severity.",
+    size = 3,
+    check_overlap = TRUE
   )
 
 ggsave(file.path(save_path, "2022_hno_pct_difference.png"))
