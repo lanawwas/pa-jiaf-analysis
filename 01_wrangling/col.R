@@ -80,6 +80,11 @@ df_minas_raw <- read_excel(
 ) %>%
   clean_names()
 
+# only look at FSN total
+# for sector data because
+# it's always higher than
+# subsets and those data
+# are much messier
 df_fsn_raw <- read_excel(
   file.path(
     file_paths$cluster_dir,
@@ -88,17 +93,6 @@ df_fsn_raw <- read_excel(
   )
 ) %>%
   slice(-1) %>%
-  type_convert() %>%
-  clean_names()
-
-df_nutr_raw <- read_excel(
-  file.path(
-    file_paths$cluster_dir,
-    "PIN Nutrition HRP 2022 Cluster SAN CO _FV.xlsx"
-  ),
-  skip = 4,
-) %>%
-  slice(-c(1:5)) %>%
   type_convert() %>%
   clean_names()
 
@@ -151,6 +145,10 @@ df_ocha <- df_ocha_raw %>%
   rename_with(
     ~ str_replace(.x, "_proteccion_", "_")
   ) %>%
+  mutate( # add severity for subset of FSN PiN
+    severidad_san_nutricion = severidad_san,
+    severidad_seguridad_alimentaria = severidad_san
+  ) %>%
   pivot_longer(
     cols = matches("^pin|^sever"),
     names_to = c(".value", "sector"),
@@ -173,6 +171,7 @@ df_edu <- df_edu_raw %>%
     source = "cluster",
     sector = "educacion",
     adm2_file_code = divipola,
+    sev = severidad_sectorial,
     pin = pin_ectorial_hno
   )
 
@@ -181,23 +180,8 @@ df_fsn <- df_fsn_raw %>%
     source = "cluster",
     sector = "san",
     adm2_file_code = as.numeric(divipola),
+    sev = sev_sectorial,
     pin = pin_sectorial
-  )
-
-# nutrition pin is separate from full FSN PiN
-# calculated across 5 columns, but not aggregated
-# fully in dataset, so having to recalculate PiN
-df_nutr <- df_nutr_raw %>%
-  rowwise() %>%
-  mutate(
-    pin = sum(c_across(c(x3_11, x4_13, x5_15, x4_26, x5_28)))
-  ) %>%
-  ungroup() %>%
-  transmute(
-    source = "cluster",
-    sector = "san_nutricion",
-    adm2_file_code = municipality_code,
-    pin
   )
 
 df_health <- df_health_raw %>%
@@ -205,6 +189,7 @@ df_health <- df_health_raw %>%
     source = "cluster",
     sector = "salud",
     adm2_file_code = as.numeric(divipola),
+    sev = as.numeric(sev_sectorial),
     pin = as.numeric(pin_sectorial)
   )
 
@@ -213,6 +198,7 @@ df_wash <- df_wash_raw %>%
     source = "cluster",
     sector = "wash",
     adm2_file_code = as.numeric(divipola),
+    sev = sev_sectorial,
     pin = pin_sectorial
   )
 
@@ -221,6 +207,7 @@ df_prot <- df_prot_raw %>%
     source = "cluster",
     sector = "proteccion",
     adm2_file_code = divipola,
+    sev = severidad_municipal,
     pin
   )
 
@@ -229,6 +216,7 @@ df_gbv <- df_gbv_raw %>%
     source = "cluster",
     sector = "vbg",
     adm2_file_code = divipola,
+    sev = severidad_municipal,
     pin
   )
 
@@ -237,6 +225,7 @@ df_ninez <- df_ninez_raw %>%
     source = "cluster",
     sector = "ninez",
     adm2_file_code = divipola,
+    sev = severidad_municipal,
     pin
   )
 
@@ -245,8 +234,29 @@ df_minas <- df_minas_raw %>%
     source = "cluster",
     sector = "minas",
     adm2_file_code = divipola,
+    sev = severidad_ma_ao_r,
     pin
   )
+
+# generate full cluster data
+# and calculate the full PiN
+# based on severity
+df_clusters <- bind_rows(
+  df_edu,
+  df_fsn,
+  df_prot,
+  df_gbv,
+  df_ninez,
+  df_minas,
+  df_wash,
+  df_health
+) %>%
+  mutate(pin = ifelse(
+    sev >= 3,
+    pin,
+    0
+  ))
+
 
 ############################
 #### GENERATE FULL DATA ####
@@ -257,15 +267,7 @@ df_col <- right_join(
   df_pcodes,
   bind_rows(
     df_ocha,
-    df_edu,
-    df_fsn,
-    df_nutr,
-    df_prot,
-    df_gbv,
-    df_ninez,
-    df_minas,
-    df_wash,
-    df_health
+    df_clusters
   ),
   by = "adm2_file_code"
 ) %>%
