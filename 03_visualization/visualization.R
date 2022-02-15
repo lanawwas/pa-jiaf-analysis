@@ -6,6 +6,10 @@ library("scales")
 jiaf_dir <- Sys.getenv("JIAF_DATA_DIR")
 save_path <- file.path(jiaf_dir, "Data analyzed")
 
+###################
+#### WRANGLING ####
+###################
+
 # Plot the PINs
 df_pins <- read.csv(
   file.path(
@@ -27,6 +31,10 @@ df_pins <- read.csv(
     ),
   )
 
+##################
+#### PLOTTING ####
+##################
+
 ggplot(df_pins, aes(
   fill = sector_group, y = pin, x = adm0_pcode,
   label = ifelse(percent_diff == 0, "",
@@ -40,7 +48,8 @@ ggplot(df_pins, aes(
     x = "Country ISO3",
     y = "PIN"
   ) +
-  scale_y_continuous(label = comma)
+  scale_y_continuous(label = comma) +
+  theme_light()
 
 ggsave(file.path(save_path, "2022_hno_pin_totals.png"))
 
@@ -71,7 +80,8 @@ ggplot(
   labs(
     x = "sector",
     y = "% contribution to intersectoral PIN"
-  )
+  ) +
+  theme_light()
 
 ggsave(file.path(save_path, "2022_hno_pin_contributions.png"))
 
@@ -86,6 +96,7 @@ df_pins %>%
     )
   ) +
   geom_bar(stat = "identity") +
+  theme_light() +
   scale_fill_gradient(
     low = "#F6BDC0",
     high = "#EA4C46"
@@ -98,9 +109,36 @@ df_pins %>%
     fill = "Number of\ndisaggregations"
   ) +
   geom_text(
-    y = "COL",
+    y = "COL 2+",
     x = 30,
-    label = "Colombia PiN difference due\nto incorporation of severity.",
+    label = paste0(
+      "Colombia PiN calculated for all sectors\n",
+      "with severity 2 and above."
+    ),
+    size = 3,
+    check_overlap = TRUE
+  ) +
+  geom_text(
+    y = "COL 3+",
+    x = 30,
+    label = paste0(
+      "Colombia PiN calculated for all sectors\n",
+      "with severity 3 and above."
+    ),
+    size = 3,
+    check_overlap = TRUE
+  ) +
+  geom_text(
+    y = "IRQ",
+    x = 30,
+    label = "Reported PiN for each admin\narea is higher than sector max.",
+    size = 3,
+    check_overlap = TRUE
+  ) +
+  geom_text(
+    y = "NGA",
+    x = 30,
+    label = "Reported PiN for each admin\narea is higher than sector max.",
     size = 3,
     check_overlap = TRUE
   )
