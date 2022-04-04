@@ -27,7 +27,8 @@ df_pins <- read.csv(
       adm0_pcode == "LBY" ~ "Libya",
       adm0_pcode == "NGA" ~ "Nigeria",
       adm0_pcode == "PSE" ~ "oPt",
-      adm0_pcode == "SDN" ~ "Sudan"
+      adm0_pcode == "SDN" ~ "Sudan",
+      adm0_pcode == "AFG" ~ "Afghanistan"
     ),
     scenario = case_when(
       adm0_pcode == "IRQ" ~ "A",

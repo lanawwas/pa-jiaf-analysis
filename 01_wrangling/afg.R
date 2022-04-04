@@ -29,9 +29,11 @@ df_ocha_raw <- read_excel(
   mutate(
     sector = "intersectoral"
   ) %>%
-  rename(number_admin1_code = number_adm1_code,
-         number_admin1_name = number_adm1_name,
-         number_sector_name = number_sector)
+  rename(
+    number_admin1_code = number_adm1_code,
+    number_admin1_name = number_adm1_name,
+    number_sector_name = number_sector
+    )
 
 df_edu_raw <- read_excel(
   ocha_fp,
