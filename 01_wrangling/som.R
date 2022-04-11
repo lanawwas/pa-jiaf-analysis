@@ -24,9 +24,8 @@ df_ocha_raw <- read_excel(
   ocha_fp,
   skip = 3,
   sheet = "All PiN"
-) 
-df_ocha_raw <-
-  df_ocha_raw[, colSums(is.na(df_ocha_raw)) < nrow(df_ocha_raw)] %>%
+) %>%
+  remove_empty("cols") %>%
   clean_names()
 
 
@@ -91,13 +90,13 @@ df_all <-
     adm2_name = number_adm2_name,
     population_group,
     sector,
-    pin = as.numeric(round(pin)),
+    pin = round(pin),
     score,
     source = "ocha",
     sector_general = ifelse(sector == "intersectoral", "intersectoral", "sectoral")
   )
 
 write_csv(
-  df_cleaned,
+  df_all,
   file_paths$save_path
 )
