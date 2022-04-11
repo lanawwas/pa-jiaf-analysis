@@ -36,7 +36,7 @@ df_ocha <- read_excel(
     population_group = "total",
     sector = "intersectoral",
     pin = as.numeric(pi_n),
-    score = vc,
+    score = as.numeric(vc),
     source = "ocha",
     sector_general = "intersectoral"
   )
@@ -62,6 +62,7 @@ df_cluster_fs <- read_excel(
     population_group = "total",
     sector = "fsc",
     pin = as.numeric(pin),
+    score = as.numeric(x18),
     source = "ocha",
     sector_general = "sectoral"
   )
@@ -87,6 +88,7 @@ df_cluster_wash <- read_excel(
     population_group = "total",
     sector = "wash",
     pin = as.numeric(x53),
+    score = as.numeric(x56),
     source = "ocha",
     sector_general = "sectoral"
   )
@@ -112,6 +114,7 @@ df_cluster_nutrition <- read_excel(
     population_group = "total",
     sector = "nutrition",
     pin = as.numeric(pi_n_2022_13),
+    score = as.numeric(severite_2022),
     source = "ocha",
     sector_general = "sectoral"
   )
@@ -137,7 +140,7 @@ df_cluster_cp <- read_excel(
     population_group = "total",
     sector = "child_protection",
     pin = as.numeric(x45),
-    score = ifelse(pin == 0, 0, x46),
+    score = ifelse(pin == 0, 0, as.numeric(x46)),
     source = "ocha",
     sector_general = "sectoral"
   )
@@ -161,7 +164,7 @@ df_cluster_mig <- read.csv(
     population_group = "total",
     sector = "migrants",
     pin = as.numeric(pin),
-    score = ifelse(pin == 0, 0, severite),
+    score = ifelse(pin == 0, 0, as.numeric(severite)),
     source = "ocha",
     sector_general = "sectoral"
   )
@@ -188,7 +191,7 @@ df_cluster_gbv <- read_excel(
     population_group = "total",
     sector = "gbv",
     pin = as.numeric(pin),
-    score = ifelse(pin == 0, 0, severite),
+    score = ifelse(pin == 0, 0, as.numeric(severite)),
     source = "ocha",
     sector_general = "sectoral"
   )
@@ -214,7 +217,7 @@ df_cluster_health <- read_excel(
     population_group = "total",
     sector = "health",
     pin = as.numeric(pin),
-    score = ifelse(pin == 0, 0, ronde_utiliser_pour_repartition_du_pin_entre_niveaux),
+    score = ifelse(pin == 0, 0, as.numeric(ronde_utiliser_pour_repartition_du_pin_entre_niveaux)),
     source = "ocha",
     sector_general = "sectoral"
   )
