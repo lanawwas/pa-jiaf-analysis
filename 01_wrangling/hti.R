@@ -153,17 +153,16 @@ df_cluster_mig <- read.csv(
   ),
 ) %>%
   clean_names() %>%
-  filter(!is.na(i_da_partement)) %>%
   transmute(
     adm0_name = "Haiti",
     adm0_pcode = "HTI",
-    adm1_name = i_da_partement,
+    adm1_name = i_department,
     adm1_pcode = pcode_dep,
     adm2_name = commune,
     adm2_pcode = pcode_com,
     population_group = "total",
     sector = "migrants",
-    pin = as.numeric(pin),
+    pin = replace_na(as.numeric(pin), 0),
     score = ifelse(pin == 0, 0, as.numeric(severite)),
     source = "ocha",
     sector_general = "sectoral"
