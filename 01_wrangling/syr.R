@@ -128,7 +128,6 @@ df_all <- left_join(
     adm3_name = admin3name_en,
     adm3_pcode = admin3pcode,
     sector,
-    population_group = "total",
     pin,
     score = ifelse(pin == 0, 0, score),
     source = "ocha",
