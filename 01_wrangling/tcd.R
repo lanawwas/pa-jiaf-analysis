@@ -42,7 +42,6 @@ df_cleaned <- df_ocha_raw %>%
     adm1_pcode,
     adm2_name = adm2_county,
     adm2_pcode,
-    population_group = "total",
     sector = ifelse(sector == "final_pi_n_hpc2022", "intersectoral", gsub("^pi_n_","",sector)),
     pin = replace_na(pin, 0),
     source = "ocha",
