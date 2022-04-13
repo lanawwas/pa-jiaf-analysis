@@ -53,7 +53,6 @@ df_cleaned <- df_ocha_raw %>%
     adm1_pcode = pcode_reg,
     adm2_en = cercle,
     adm2_pcode = pcode_cer,
-    population_group = "total",
     sector,
     pin,
     source = "ocha",
