@@ -156,7 +156,7 @@ df_cluster_mig <- read.csv(
   transmute(
     adm0_name = "Haiti",
     adm0_pcode = "HTI",
-    adm1_name = i_department,
+    adm1_name = department,
     adm1_pcode = pcode_dep,
     adm2_name = commune,
     adm2_pcode = pcode_com,
