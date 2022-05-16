@@ -60,11 +60,11 @@ df_ocha_raw <- read_in_disagg(ocha_fp)
 # drop strange empty columns
 df_ocha <- df_ocha_raw %>%
   pivot_longer(
-    cols = ends_with("pin"),
+    cols = ends_with("pin") | ends_with("sev"),
     names_to = c("sector", ".value"),
     names_sep = "_"
   ) %>%
-  select(adm2_pcode, population_group, sector, pin) %>%
+  select(adm2_pcode, population_group, sector, pin, severity = sev) %>%
   drop_na(adm2_pcode) %>%
   mutate(
     source = "ocha"
@@ -82,21 +82,23 @@ df_pcodes <- df_ocha_raw %>%
 ############################
 # and in the darkness bind them
 
-
-df_irq <- df_ocha %>%
+df_organized <- df_ocha %>%
   left_join(
     df_pcodes,
     by = "adm2_pcode"
   ) %>%
-  relocate(adm1_en:adm2_en,
-    .before = 1
-  ) %>%
-  mutate(
+  transmute(
+    adm0_name = "Iraq",
     adm0_pcode = "IRQ",
-    adm0_en = "Iraq",
-    .before = adm1_en,
-  ) %>%
-  mutate(
+    adm1_name = adm1_en,
+    adm1_pcode,
+    adm2_name = adm2_en,
+    adm2_pcode,
+    population_group,
+    sector,
+    pin = round(pin),
+    severity = ifelse(pin == 0, 1, severity),
+    source = "ocha",
     sector_general = ifelse(
       sector == "itc",
       "intersectoral",
@@ -109,17 +111,23 @@ df_irq <- df_ocha %>%
   )
 
 # deleting those areas that don't have any PiN for a specific group
-df_summarized <- df_irq %>%
+df_summarized <- df_organized %>%
   group_by(adm2_name, population_group) %>%
   summarise(tot_pin = sum(pin)) %>%
   filter(tot_pin != 0)
 
-df_cleaned <- df_irq %>% 
+df_irq <- df_organized %>%
   filter(
-    paste0(adm2_name, population_group) %in% paste0(df_summarized$adm2_name, df_summarized$population_group)
+    paste0(
+      adm2_name,
+      population_group
+    ) %in% paste0(
+      df_summarized$adm2_name,
+      df_summarized$population_group
+    )
   )
 
 write_csv(
-  df_cleaned,
+  df_irq,
   file_paths$save_path
 )

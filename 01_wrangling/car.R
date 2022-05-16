@@ -42,6 +42,7 @@ df_ocha_pcodes <- read_excel(
   ocha_fp,
   sheet = "Pop_SPref2022HorsRef"
 ) %>%
+  filter(row_number() < 80) %>%
   clean_names()
 
 # CCCM/NFI/Shelter data
@@ -214,45 +215,84 @@ df_health <- read_excel(
 #### DATA WRANGLING ####
 ########################
 
-df_ocha <-
-  bind_rows(
-    df_ocha_raw,
-    df_fs,
-    df_gbv,
-    df_prot,
-    df_cp,
-    df_nutr,
-    df_health,
-    df_education,
-    df_prot
-  ) %>%
+df_organized <-bind_rows(
+  df_ocha_raw,
+  df_fs,
+  df_gbv,
+  df_prot,
+  df_cp,
+  df_nutr,
+  df_health,
+  df_education,
+  df_prot
+) %>%
   transmute(
     adm0_name = "Central African Republic",
     adm0_pcode = "CAR",
-    adm1_name = df_education$prefecture[match(
-      sous_prefecture,
-      df_education$sous_prefecture
-    )],
-    adm1_pcode = ifelse(sous_prefecture == "Bangui", "Bangui", adm1_name),
+    adm1_name = prefecture,
     adm1_pcode = df_education$pcode_pref[match(
-      sous_prefecture,
-      df_education$sous_prefecture
+      adm1_name,
+      df_education$prefecture
     )],
-    adm1_pcode = ifelse(sous_prefecture == "Bangui", "CF71", adm1_pcode),
     adm2_name = sous_prefecture,
-    adm2_pcode = df_education$pcode_sous_pref[match(
+    adm2_pcode = df_ocha_pcodes$pcode_sous_pref[match(
       sous_prefecture,
-      df_education$sous_prefecture
+      df_ocha_pcodes$sous_prefecture
     )],
-    adm2_pcode = ifelse(sous_prefecture == "Bangui", "CF711", adm2_pcode),
+    adm2_pcode = case_when(
+      sous_prefecture == "Bangui" ~ "CF711",
+      sous_prefecture == "Batangafo" ~ "CF326",
+      sous_prefecture %in% c("Nana-Boguila", "Nangha-Boguila") ~ "CF324",
+      sous_prefecture == "Abba" ~ "CF224",
+      TRUE ~ adm2_pcode),
     sector = "intersectoral",
     population_group = pop_groupe,
-    pin = round(pin),
+    pin = round(pin, 0),
     source = "ocha",
     sector_general = "intersectoral"
+  ) %>%
+  filter(
+    population_group != "total"
+  )
+
+# deleting those areas that don't have any PiN for a specific group
+df_summarized_pops <- df_organized %>%
+  group_by(adm1_name, population_group) %>%
+  summarise(tot_pin = sum(pin, na.rm = T)) %>%
+  filter(tot_pin != 0)
+
+df_car <- df_organized %>%
+  filter(
+    paste0(adm1_name, population_group) %in% paste0(
+      df_summarized_pops$adm1_name,
+      df_summarized_pops$population_group
+    )
   )
 
 write_csv(
+<<<<<<< HEAD
+  df_car,
+=======
   df_ocha,
+=======
+
+# deleting those areas that don't have any PiN for a specific group
+df_summarized_pops <- df_organized %>%
+  group_by(adm1_name, population_group) %>%
+  summarise(tot_pin = sum(pin, na.rm = T)) %>%
+  filter(tot_pin != 0)
+
+df_car <- df_organized %>%
+  filter(
+    paste0(adm1_name, population_group) %in% paste0(
+      df_summarized_pops$adm1_name,
+      df_summarized_pops$population_group
+    )
+  )
+
+write_csv(
+  df_car,
+>>>>>>> e432b1e (population group cleaning and seveirty scores added)
+>>>>>>> b5ec979 (population group cleaning and seveirty scores added)
   gsub("caf_pin", "car_pin", file_paths$save_path)
 )
