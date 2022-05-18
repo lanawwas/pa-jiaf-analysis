@@ -270,20 +270,6 @@ df_car <- df_organized %>%
     )
   )
 
-# deleting those areas that don't have any PiN for a specific group
-df_summarized_pops <- df_organized %>%
-  group_by(adm1_name, population_group) %>%
-  summarise(tot_pin = sum(pin, na.rm = TRUE)) %>%
-  filter(tot_pin != 0)
-
-df_car <- df_organized %>%
-  filter(
-    paste0(adm1_name, population_group) %in% paste0(
-      df_summarized_pops$adm1_name,
-      df_summarized_pops$population_group
-    )
-  )
-
 write_csv(
   df_car,
   gsub("caf_pin", "car_pin", file_paths$save_path)
