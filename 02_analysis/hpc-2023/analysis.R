@@ -212,7 +212,8 @@ cluster_df <-
         "inter_sectoral",
         "intersectorial",
         "itc"
-      ) ~ "intersectoral"
+      ) ~ "intersectoral",
+      TRUE ~ sector
     )
   ) %>%
   filter(sector != "intersectoral")
