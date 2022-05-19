@@ -55,10 +55,10 @@ max_pin <- function(df) {
       ) %>%
       summarize(
         agg_cols = paste(
-          names(.)[1:(ncol(.) - 1)],
+          c(names(.)[1:(ncol(.) - 3)], unique(agg_groups_name)),
           collapse = ", "
         ),
-        agg_cols_n = ncol(.) - 2,
+        agg_cols_n = ncol(.) - 3,
         agg_groups_n = mean(agg_groups_n),
         agg_groups_name = unique(agg_groups_name),
         pin = sum(pin),
@@ -181,6 +181,53 @@ ggsave(
   width = 8
 )
 
+# difference between highest a lowest aggregation
+
+results_df %>%
+  group_by(
+    adm0_pcode
+  ) %>%
+  filter(
+    agg_cols_n %in% c(max(agg_cols_n), min(agg_cols_n))
+  )
+mutate(
+  pin = pin / pin[1]
+) %>%
+  filter(agg_cols_n != 0) %>%
+  ggplot(
+    aes(
+      y = pin,
+      x = agg_cols_n,
+      fill = agg_cols_n
+    )
+  ) +
+  geom_bar(stat = "identity") +
+  facet_grid(
+    adm0_pcode ~ "",
+    scales = "free_y"
+  ) +
+  coord_flip() +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    plot.background = element_rect(fill = "white")
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1)
+  ) +
+  labs(
+    y = "PiN (% of max PiN for most disaggregated data)",
+    fill = "Number of\ndisaggregations",
+    title = "Comparison of PiNs by level of disaggregation",
+    caption = paste0(
+      "Disaggregations go 1 to 6 from administrative ",
+      "boundaries to population groups to sex and age"
+    )
+  )
+
+
 # see drop in % based on # of agg groups
 results_df %>%
   group_by(
@@ -229,6 +276,6 @@ ggsave(
     file_paths$output_dir,
     "2022_hno_max_test_pct.png"
   ),
-  height = 8,
+  height = 6,
   width = 5
 )
