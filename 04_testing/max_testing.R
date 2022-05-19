@@ -188,44 +188,106 @@ results_df %>%
     adm0_pcode
   ) %>%
   filter(
-    agg_cols_n %in% c(max(agg_cols_n), min(agg_cols_n))
-  )
-mutate(
-  pin = pin / pin[1]
-) %>%
-  filter(agg_cols_n != 0) %>%
+    agg_cols_n %in% c(max(agg_cols_n), 1)
+  ) %>%
+  summarize(
+    pin = pin[1] - pin[2],
+    agg_diff = agg_cols_n[1] - agg_cols_n[2],
+    .groups = "drop"
+  ) %>%
+  filter(
+    adm0_pcode != "VEN"
+  ) %>%
   ggplot(
     aes(
-      y = pin,
-      x = agg_cols_n,
-      fill = agg_cols_n
+      x = pin,
+      y = reorder(adm0_pcode, pin),
+      fill = agg_diff
     )
   ) +
   geom_bar(stat = "identity") +
-  facet_grid(
-    adm0_pcode ~ "",
-    scales = "free_y"
+  scale_x_continuous(
+    labels = scales::comma
   ) +
-  coord_flip() +
   theme_minimal() +
   theme(
     axis.title.y = element_blank(),
     axis.ticks.y = element_blank(),
-    axis.text.y = element_blank(),
     plot.background = element_rect(fill = "white")
   ) +
-  scale_y_continuous(
+  labs(
+    y = "",
+    x = "Increase in PiN",
+    fill = "# of levels of\ndisaggregation",
+    title = paste(
+      "Increase of country PiN",
+      "if calculated using multiple disaggregations"
+    ),
+    subtitle = "Comparing calculations from most disaggregated with admin 1"
+  )
+
+ggsave(
+  file.path(
+    file_paths$output_dir,
+    "2022_hno_max_test_absolute.png"
+  ),
+  height = 6.5,
+  width = 6.5
+)
+
+# difference between highest and lowest aggregation, as a percent
+
+results_df %>%
+  group_by(
+    adm0_pcode
+  ) %>%
+  filter(
+    agg_cols_n %in% c(max(agg_cols_n), 1)
+  ) %>%
+  summarize(
+    pin = (pin[1] - pin[2]) / pin[2],
+    agg_diff = agg_cols_n[1] - agg_cols_n[2],
+    .groups = "drop"
+  ) %>%
+  filter(
+    adm0_pcode != "VEN"
+  ) %>%
+  ggplot(
+    aes(
+      x = pin,
+      y = reorder(adm0_pcode, pin),
+      fill = agg_diff
+    )
+  ) +
+  geom_bar(stat = "identity") +
+  scale_x_continuous(
     labels = scales::percent_format(accuracy = 1)
   ) +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    plot.background = element_rect(fill = "white")
+  ) +
   labs(
-    y = "PiN (% of max PiN for most disaggregated data)",
-    fill = "Number of\ndisaggregations",
-    title = "Comparison of PiNs by level of disaggregation",
-    caption = paste0(
-      "Disaggregations go 1 to 6 from administrative ",
-      "boundaries to population groups to sex and age"
-    )
+    y = "",
+    x = "Increase in PiN (% change)",
+    fill = "# of levels of\ndisaggregation",
+    title = paste(
+      "% increase of country PiN if",
+      "calculated using multiple disaggregations"
+    ),
+    subtitle = "Comparing calculations from most disaggregated with admin 1"
   )
+
+ggsave(
+  file.path(
+    file_paths$output_dir,
+    "2022_hno_max_test_percent_change.png"
+  ),
+  height = 6.5,
+  width = 6.5
+)
 
 
 # see drop in % based on # of agg groups
