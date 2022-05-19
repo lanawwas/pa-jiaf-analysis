@@ -93,7 +93,18 @@ tester <- function(df) {
   n <- ncol(df)
   map_dfr(
     (n - 2):1,
-    ~ max_pin(df[, c(1:.x, n - 1, n)])
+    \(x) {
+      cols <- c(names(df)[1:x], "sector")
+      df %>%
+        group_by(
+          across(cols)
+        ) %>%
+        summarize(
+          pin = sum(pin),
+          .groups = "drop"
+        ) %>%
+        max_pin()
+    }
   )
 }
 
