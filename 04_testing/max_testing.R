@@ -34,7 +34,7 @@ df <- read_csv(
 max_pin <- function(df) {
   df %>%
     group_by(
-      across(-pin)
+      across(-c(sector, pin))
     ) %>%
     summarize(
       pin = max(pin),
@@ -45,10 +45,10 @@ max_pin <- function(df) {
     ) %>%
     summarize(
       agg_cols = paste(
-        names(.)[1:(ncol(.) - 2)],
+        names(.)[1:(ncol(.) - 1)],
         collapse = ", "
       ),
-      agg_cols_n = ncol(.) - 3,
+      agg_cols_n = ncol(.) - 2,
       pin = sum(pin)
     )
 }
