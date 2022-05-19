@@ -157,7 +157,8 @@ df_afg <- df_organized %>%
     paste0(sector, age_gender_group) %in% paste0(
       df_summarized_age_sex$sector,
       df_summarized_age_sex$age_gender_group
-    )
+    ),
+    population_group != "total"
   ) %>%
   separate(age_gender_group, into = c("sex", "age")) %>%
   mutate(
