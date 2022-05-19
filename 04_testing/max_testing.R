@@ -32,25 +32,55 @@ df <- read_csv(
 # calculates the max pin
 # based on available data
 max_pin <- function(df) {
-  df %>%
+  grouped_df <- df %>%
     group_by(
       across(-c(sector, pin))
     ) %>%
     summarize(
       pin = max(pin),
-      .groups = "drop"
-    ) %>%
-    group_by(
-      adm0_pcode
-    ) %>%
-    summarize(
-      agg_cols = paste(
-        names(.)[1:(ncol(.) - 1)],
-        collapse = ", "
-      ),
-      agg_cols_n = ncol(.) - 2,
-      pin = sum(pin)
+      .groups = "drop_last"
     )
+
+  # only if we have enough groups
+  if (ncol(grouped_df) > 2) {
+    grouped_df <- grouped_df %>%
+      summarize(
+        pin = sum(pin),
+        agg_groups_n = n(),
+        agg_groups_name = names(.)[ncol(.) - 1],
+        .groups = "drop"
+      ) %>%
+      group_by(
+        adm0_pcode
+      ) %>%
+      summarize(
+        agg_cols = paste(
+          names(.)[1:(ncol(.) - 1)],
+          collapse = ", "
+        ),
+        agg_cols_n = ncol(.) - 2,
+        agg_groups_n = mean(agg_groups_n),
+        agg_groups_name = unique(agg_groups_name),
+        pin = sum(pin),
+        .groups = "drop"
+      )
+  } else {
+    grouped_df <- grouped_df %>%
+      group_by(
+        adm0_pcode
+      ) %>%
+      summarize(
+        agg_cols = paste(
+          names(.)[1],
+          collapse = ", "
+        ),
+        agg_cols_n = ncol(.) - 2,
+        pin = sum(pin),
+        .groups = "drop"
+      )
+  }
+
+  grouped_df
 }
 
 # tests all combinations for specific adm0
@@ -87,6 +117,8 @@ results_df %>%
 ################
 #### VISUAL ####
 ################
+
+# check PiN for level of disaggregation
 
 results_df %>%
   group_by(
@@ -136,4 +168,56 @@ ggsave(
   ),
   height = 13,
   width = 8
+)
+
+# see drop in % based on # of agg groups
+results_df %>%
+  group_by(
+    adm0_pcode
+  ) %>%
+  mutate(
+    pin_change = (pin - lag(pin)) / lag(pin),
+    agg_groups_n = lag(agg_groups_n),
+    agg_groups_name = lag(agg_groups_name),
+    agg_groups_type = case_when(
+      str_starts(agg_groups_name, "adm") ~ "Admin",
+      agg_groups_name == "population_group" ~ "Population group",
+      TRUE ~ str_to_title(agg_groups_name)
+    )
+  ) %>%
+  filter(
+    !is.na(agg_groups_n)
+  ) %>%
+  ggplot(
+    aes(
+      y = pin_change,
+      x = agg_groups_n,
+      color = agg_groups_type
+    )
+  ) +
+  geom_point() +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1)
+  ) +
+  scale_color_brewer(
+    palette = "PuOr"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.background = element_rect(fill = "white")
+  ) +
+  labs(
+    y = "% reduction in PiN when aggregation removed",
+    x = "Average # of unique groups in aggregation",
+    color = "Type of aggregation",
+    title = "Impact of aggregation on max PiN"
+  )
+
+ggsave(
+  file.path(
+    file_paths$output_dir,
+    "2022_hno_max_test_pct.png"
+  ),
+  height = 8,
+  width = 5
 )
