@@ -36,7 +36,7 @@ df_is <- read_csv(
   ) %>%
   select(
     adm0_pcode,
-    pin
+    pin_hrp = pin
   )
 
 ###################
@@ -400,6 +400,15 @@ results_df %>%
       "JIAF 1.1 reported PiN"
     ),
     caption = "Positive value means disaggregated max higher than JIAF 1.1 PiN"
+  ) +
+  geom_text(
+    x = 0,
+    y = "VEN",
+    label = paste0(
+      "5 countries' reported JIAF 1.1\n",
+      "PiNs match the disaggregated max"
+    ),
+    check_overlap = TRUE
   )
 
 ggsave(
