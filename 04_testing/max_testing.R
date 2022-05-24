@@ -25,6 +25,20 @@ df <- read_csv(
     pin
   )
 
+df_is <- read_csv(
+  file.path(
+    file_paths$output_dir,
+    "2022_hno_pin_totals.csv"
+  )
+) %>%
+  filter(
+    sector_group == "intersectoral"
+  ) %>%
+  select(
+    adm0_pcode,
+    pin
+  )
+
 ###################
 #### FUNCTIONS ####
 ###################
@@ -97,7 +111,9 @@ tester <- function(df) {
       cols <- c(names(df)[1:x], "sector")
       df %>%
         group_by(
-          across(cols)
+          across(
+            all_of(cols)
+          )
         ) %>%
         summarize(
           pin = sum(pin),
@@ -164,7 +180,7 @@ results_df %>%
   ) +
   labs(
     y = "PiN (% of max PiN for most disaggregated data)",
-    fill = "Number of\ndisaggregations",
+    fill = "Levels of disaggregation",
     title = "Comparison of PiNs by level of disaggregation",
     caption = paste0(
       "Disaggregations go 1 to 6 from administrative ",
@@ -218,7 +234,7 @@ results_df %>%
   labs(
     y = "",
     x = "Increase in PiN",
-    fill = "# of levels of\ndisaggregation",
+    fill = "Additional levels\nof disaggregation",
     title = paste(
       "Increase of country PiN",
       "if calculated using multiple disaggregations"
@@ -272,7 +288,7 @@ results_df %>%
   labs(
     y = "",
     x = "Increase in PiN (% change)",
-    fill = "# of levels of\ndisaggregation",
+    fill = "Additional levels\nof disaggregation",
     title = paste(
       "% increase of country PiN if",
       "calculated using multiple disaggregations"
@@ -340,4 +356,57 @@ ggsave(
   ),
   height = 6,
   width = 5
+)
+
+# max agg PiN with HRP
+results_df %>%
+  group_by(
+    adm0_pcode
+  ) %>%
+  filter(
+    agg_cols_n == max(agg_cols_n)
+  ) %>%
+  left_join(
+    df_is,
+    by = "adm0_pcode"
+  ) %>%
+  mutate(
+    pin_diff = pin - pin_hrp
+  ) %>%
+  ggplot() +
+  geom_segment(
+    aes(
+      y = reorder(adm0_pcode, pin_diff),
+      yend = reorder(adm0_pcode, pin_diff),
+      x = 0,
+      xend = pin_diff
+    ),
+    lwd = 3
+  ) +
+  scale_x_continuous(
+    labels = scales::comma
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    plot.background = element_rect(fill = "white")
+  ) +
+  labs(
+    y = "",
+    x = "Difference in PiN, disaggregated max - JIAF 1.1",
+    title = paste(
+      "Difference in country PiN using disaggregated max compared to",
+      "JIAF 1.1 reported PiN"
+    ),
+    caption = "Positive value means disaggregated max higher than JIAF 1.1 PiN"
+  )
+
+ggsave(
+  file.path(
+    file_paths$output_dir,
+    "2022_hno_max_vs_jiaf.png"
+  ),
+  height = 6,
+  width = 8
 )
