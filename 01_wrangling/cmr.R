@@ -116,9 +116,16 @@ df_cmr <- df_organized %>%
   )
 
 df_cmr_indicator <- df_indicators %>%
-  separate(col = key, c("adm2_pcode", "population_group"), sep = "-", extra = "merge") %>%
+  separate(
+    col = key,
+    into = c("adm2_pcode", "population_group"),
+    sep = "-",
+    extra = "merge"
+  ) %>%
   left_join(
-    df_ocha_raw %>% select(adm1_name = region, adm2_name = division, adm2_pcode) %>% unique(),
+    df_ocha_raw %>%
+      select(adm1_name = region, adm2_name = division, adm2_pcode)
+      %>% unique(),
     by = "adm2_pcode"
   ) %>%
   transmute(
@@ -129,7 +136,8 @@ df_cmr_indicator <- df_indicators %>%
     adm2_name,
     adm2_pcode,
     population_group,
-    indicator_number = paste0(indicator_number, ifelse(critical_status == "Yes", "_critical", "")),
+    indicator_number,
+    critical = critical_status == "Yes",
     indicator_desc = indicator_text,
     pin = round(calculated_pi_n),
     severity = calculated_severity

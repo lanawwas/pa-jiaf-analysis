@@ -158,28 +158,42 @@ df_organized <- bind_rows(
 # deleting those areas that don't have any PiN for a specific group
 df_summarized_pops <- df_organized %>%
   group_by(adm3_name, population_group) %>%
-  summarise(tot_pin = sum(pin, na.rm = T)) %>%
+  summarise(tot_pin = sum(pin, na.rm = TRUE)) %>%
   filter(tot_pin != 0)
 
-# deleting those age-sex groups that don't have any PiN for a specific sectoral PiN
+# deleting those age-sex groups that don't have any PiN for a specific sector
 df_summarized_age_sex <- df_organized %>%
   group_by(sector, age_sex = paste0(age, sex)) %>%
-  summarize(tot_pin = sum(pin, na.rm = T)) %>%
+  summarize(tot_pin = sum(pin, na.rm = TRUE)) %>%
   filter(tot_pin != 0)
 
-df_lby <- df_organized %>% 
+df_lby <- df_organized %>%
   filter(
-    paste0(adm3_name, population_group) %in% paste0(df_summarized_pops$adm3_name, df_summarized_pops$population_group),
-    paste0(sector, age, sex) %in% paste0(df_summarized_age_sex$sector, df_summarized_age_sex$age_sex)
-  ) 
+    paste0(adm3_name, population_group) %in% paste0(
+      df_summarized_pops$adm3_name,
+      df_summarized_pops$population_group
+    ),
+    paste0(sector, age, sex) %in% paste0(
+      df_summarized_age_sex$sector,
+      df_summarized_age_sex$age_sex
+    )
+  )
 
 df_lby_indicator <- df_indicators %>%
-  separate(col = key, c("adm3_name", "population_group"), sep = "-", extra = "merge") %>%
+  separate(
+    col = key,
+    into = c("adm3_name", "population_group"),
+    sep = "-", extra = "merge"
+  ) %>%
   left_join(
-    df_lby %>% select(adm1_name, adm1_pcode, adm2_name, adm2_pcode, adm3_pcode, adm3_name) %>% unique(),
+    df_lby %>%
+      select(
+        starts_with("adm")
+      ) %>%
+      unique(),
     by = c("pcode" = "adm3_pcode", "adm3_name")
   ) %>%
-  #indicator 19 is all blank caused by an error from the file
+  # indicator 19 is all blank caused by an error from the file
   filter(indicator_number != 19) %>%
   transmute(
     adm0_name = "Libya",
@@ -191,8 +205,12 @@ df_lby_indicator <- df_indicators %>%
     adm3_name,
     adm3_pcode = pcode,
     population_group,
-    indicator_number = ifelse(indicator_number > 19, indicator_number - 1, indicator_number),
-    indicator_number = paste0(indicator_number, ifelse(critical_status == "Yes", "_critical", "")),
+    indicator_number = ifelse(
+      indicator_number > 19,
+      indicator_number - 1,
+      indicator_number
+    ),
+    critical = critical_status == "Yes",
     indicator_desc = indicator_text,
     pin = round(calculated_pi_n),
     severity = calculated_severity

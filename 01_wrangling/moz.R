@@ -95,10 +95,7 @@ df_moz_indicator <- df_ocha_raw %>%
     adm2_name = adm2_district,
     adm2_pcode = adm2_pcode,
     indicator_number = as.integer(factor(indicator_desc)),
-    indicator_number = paste0(
-      indicator_number,
-      ifelse(indicator_number %in% c(6, 8, 9, 13, 17), "_critical", "")
-    ),
+    critical = indicator_number %in% c(6, 8, 9, 13, 17),
     indicator_desc = ifelse(
       indicator_desc == "...16",
       "Health Indicator",

@@ -205,10 +205,8 @@ df_ssd_indicator <- df_indicators %>%
     adm1_pcode,
     adm2_name,
     adm2_pcode = admin_2_p_code,
-    indicator_number = paste0(
-      indicator_number,
-      ifelse(critical_status == "Yes", "_critical", "")
-    ),
+    indicator_number,
+    critical = critical_status == "Yes",
     indicator_desc = indicator_text,
     pin = replace_na(round(calculated_pi_n), 0),
     severity = calculated_severity

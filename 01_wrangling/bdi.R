@@ -102,7 +102,7 @@ df_all <- rbind(
 # deleting those areas that don't have any PiN for a specific group
 df_summarized_pops <- df_all %>%
   group_by(adm1_name, population_group) %>%
-  summarise(tot_pin = sum(pin, na.rm = T)) %>%
+  summarise(tot_pin = sum(pin, na.rm = TRUE)) %>%
   filter(tot_pin != 0)
 
 df_bdi <- df_all %>%
@@ -117,7 +117,9 @@ df_bdi <- df_all %>%
 df_bdi_indicator <- df_indicators %>%
   separate(col = key, c("adm2_name", "population_group"), sep = "_") %>%
   left_join(
-    df_ocha_pcode_extract %>% select(adm1_state, adm1_pcode, adm2_county, adm2_pcode) %>% unique(),
+    df_ocha_pcode_extract %>%
+      select(adm1_state, adm1_pcode, adm2_county, adm2_pcode) %>%
+      unique(),
     by = c("adm2_pcode", "adm2_name" = "adm2_county")
   ) %>%
   transmute(
@@ -128,7 +130,8 @@ df_bdi_indicator <- df_indicators %>%
     adm2_name,
     adm2_pcode,
     population_group,
-    indicator_number = paste0(indicator_number, ifelse(critical_status == "Oui", "_critical", "")),
+    indicator_number,
+    critical = critical_status == "Oui",
     indicator_desc = indicator_text,
     pin = round(calculated_pi_n),
     severity = calculated_severity

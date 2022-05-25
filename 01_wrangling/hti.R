@@ -203,8 +203,10 @@ df_cluster_gbv <- read_excel(
 
 # Health
 df_cluster_health <- read_excel(
-  file.path(file_paths$ocha_dir,
-            "HTI_HNO 2022 - SANTE.xlsx"),
+  file.path(
+    file_paths$ocha_dir,
+    "HTI_HNO 2022 - SANTE.xlsx"
+  ),
   skip = 2,
   sheet = "Feuil1"
 ) %>%
@@ -229,8 +231,9 @@ df_cluster_health <- read_excel(
   )
 
 df_indicator <- read_excel(ocha_fp,
-                           skip = 5,
-                           sheet = "Ind data") %>%
+  skip = 5,
+  sheet = "Ind data"
+) %>%
   clean_names() %>%
   filter(row_number() > 17)
 
@@ -278,14 +281,16 @@ df_hti <- bind_rows(
 )
 
 df_hti_cleaning <- df_indicator %>%
-  select(-matches("^x[1-5]"),-c(disaster_risk,
-                                insecurity,
-                                access,
-                                population))
+  select(-matches("^x[1-5]"), -c(
+    disaster_risk,
+    insecurity,
+    access,
+    population
+  ))
 
 indicator_names <- data.frame(cur_name = names(df_hti_cleaning)[5:46]) %>%
   mutate(new_names = ifelse(
-    row_number() %% 2 == 1, #reminder of 2, if 1 it's odd
+    row_number() %% 2 == 1, # reminder of 2, if 1 it's odd
     paste0(cur_name, ".severity"),
     paste0(lag(cur_name), ".pin")
   ))
@@ -297,24 +302,21 @@ df_hti_indicator <- df_hti_cleaning %>%
     cols = matches("pin$|severity$"),
     names_to = c("indicator_desc", ".value"),
     names_pattern = "(.*).(pin|severity)"
-  ) %>% 
+  ) %>%
   mutate(indicator_number = as.numeric(factor(indicator_desc))) %>%
   transmute(
-  adm0_name = "Haiti",
-  adm0_pcode = "HTI",
-  adm1_name = departement,
-  adm1_pcode = dep_p_code,
-  adm2_name = commune,
-  adm2_pcode = com_p_code,
-  indicator_number = ifelse(
-    indicator_number %in% c(2, 3, 5, 7, 9, 10, 12:16, 21), 
-    paste0(indicator_number, "_critical"),
-    indicator_number
-  ),
-  indicator_desc,
-  pin,
-  severity
-)
+    adm0_name = "Haiti",
+    adm0_pcode = "HTI",
+    adm1_name = departement,
+    adm1_pcode = dep_p_code,
+    adm2_name = commune,
+    adm2_pcode = com_p_code,
+    indicator_number,
+    critical = indicator_number %in% c(2, 3, 5, 7, 9, 10, 12:16, 21),
+    indicator_desc,
+    pin,
+    severity
+  )
 
 write_csv(
   df_hti,
