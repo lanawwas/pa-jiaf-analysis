@@ -8,24 +8,15 @@ aggregated_data_dir <- "Data aggregated for analysis"
 #' @param country_name If `country` is not an easily interpretable
 #'     country name, and thus retrieval of an ISO3 code impossible,
 #'     pass `country_name` instead.
-#' @param file_type One of `"sectoral"`, `"household"`, or `"indicator"`.
-#'     Determines the save file path.
 #'
 #' @return Named list of:
 #'     * OCHA data directory
 #'     * Cluster data directory
 #'     * Save file path
-get_paths <- function(country, country_name = NULL, file_type = "sectoral") {
+get_paths <- function(country, country_name = NULL) {
   if (is.null(country_name)) {
     country_name <- country
   }
-
-  save_path_dir <- switch(file_type,
-    "sectoral" = "sectoral_pins",
-    "indicator" = "indicator_pins",
-    "household" = "hh_data",
-    stop("`file_type` must be `sectoral`, `indicator`, or `household`.")
-  )
 
   # iso3 for use in save path
   iso3 <- tolower( # nolint
@@ -51,44 +42,59 @@ get_paths <- function(country, country_name = NULL, file_type = "sectoral") {
     country
   )
 
-  # file path to save pin data
+  fn <- glue::glue("{iso3}_pins_2022.csv")
+
+  # file path to save sectoral pin data
   save_path <- file.path(
     data_dir,
     aggregated_data_dir,
-    save_path_dir,
-    glue::glue("{iso3}_pins_2022.csv")
+    "sectoral_pins",
+    fn
   )
+
+  # file path to save indicator pin data
+  save_path_indicator <- file.path(
+    data_dir,
+    aggregated_data_dir,
+    "indicator_pins",
+    fn
+  )
+
+  # file path to save hh data
+  save_path_hh_data <- file.path(
+    data_dir,
+    aggregated_data_dir,
+    "hh_data",
+    fn
+  )
+
 
   list(
     ocha_dir = ocha_dir,
     cluster_dir = cluster_dir,
-    save_path = save_path
+    save_path = save_path,
+    save_path_hh_data = save_path_hh_data,
+    save_path_indicator = save_path_indicator
   )
 }
 
-#' @param input_type One of `"sectoral"`, `"household"`, or `"indicator"`.
-#'     Determines the input file path.
-get_paths_analysis <- function(input_type = "sectoral") {
-
-  # TODO: Make name of this a constant
+get_paths_analysis <- function() {
   data_dir <- Sys.getenv("JIAF_DATA_DIR")
 
-  input_type_dir <- switch(input_type,
-    "sectoral" = "sectoral_pins",
-    "indicator" = "indicator_pins",
-    "household" = "hh_data",
-    stop("`input_type` must be `sectoral`, `indicator`, or `household`.")
-  )
-
-  input_dir <- file.path(
+  agg_dir <- file.path(
     data_dir,
-    aggregated_data_dir,
-    input_type_dir
+    aggregated_data_dir
   )
 
   output_dir <- file.path(
     data_dir,
     "Data analyzed"
   )
-  list(input_dir = input_dir, output_dir = output_dir)
+
+  list(
+    input_dir = file.path(agg_dir, "sectoral_pins"),
+    input_hh_dir = file.path(agg_dir, "hh_data"),
+    input_indicator_dir = file.path(agg_dir, "indicator_pins"),
+    output_dir = output_dir
+  )
 }
