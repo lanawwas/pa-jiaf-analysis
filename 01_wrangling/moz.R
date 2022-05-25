@@ -81,7 +81,8 @@ df_moz <- df_ocha_raw %>%
 df_moz_indicator <- df_ocha_raw %>%
   type_convert() %>%
   pivot_longer(
-    cols = `# of people in IPC phases`:`# of people without access to appropriate hygiene facilities`,
+    cols = `# of people in IPC phases`:
+    `# of people without access to appropriate hygiene facilities`,
     values_to = "pin",
     names_to = "indicator_desc"
   ) %>%
@@ -94,10 +95,17 @@ df_moz_indicator <- df_ocha_raw %>%
     adm2_name = adm2_district,
     adm2_pcode = adm2_pcode,
     indicator_number = as.integer(factor(indicator_desc)),
-    indicator_number = paste0(indicator_number, ifelse(indicator_number %in% c(6, 8, 9, 13, 17), "_critical", "")),
-    indicator_desc = ifelse(indicator_desc == "...16", "Health Indicator", indicator_desc),
-    pin = round(pin)
-    )
+    indicator_number = paste0(
+      indicator_number,
+      ifelse(indicator_number %in% c(6, 8, 9, 13, 17), "_critical", "")
+    ),
+    indicator_desc = ifelse(
+      indicator_desc == "...16",
+      "Health Indicator",
+      indicator_desc
+    ),
+    pin = replace_na(round(pin), 0)
+  )
 
 write_csv(
   df_moz,
