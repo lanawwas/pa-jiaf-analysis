@@ -41,9 +41,9 @@ get_paths <- function(country, country_name = NULL) {
     "Data from country offices - Clusters",
     country
   )
-  
+
   fn <- glue::glue("{iso3}_pins_2022.csv")
-  
+
   # file path to save sectoral pin data
   save_path <- file.path(
     data_dir,
@@ -68,7 +68,7 @@ get_paths <- function(country, country_name = NULL) {
     fn
   )
   
-  
+ 
   list(
     ocha_dir = ocha_dir,
     cluster_dir = cluster_dir,
@@ -90,7 +90,7 @@ get_paths_analysis <- function() {
     data_dir,
     "Data analyzed"
   )
-  
+
   list(
     input_dir = file.path(agg_dir, "sectoral_pins"),
     input_hh_dir = file.path(agg_dir, "hh_data"),
