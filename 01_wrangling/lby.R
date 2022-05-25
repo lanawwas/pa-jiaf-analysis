@@ -205,7 +205,7 @@ df_lby_indicator <- df_indicators %>%
     adm3_name,
     adm3_pcode = ifelse(
       adm3_name == "Misrata", # fix error in one of the rows
-      "LY0214",
+      "LY021405",
       pcode
     ),
     population_group,
