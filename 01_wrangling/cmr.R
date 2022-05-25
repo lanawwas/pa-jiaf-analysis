@@ -47,6 +47,16 @@ df_ocha_raw <- map_dfr(
 ) %>%
   bind_rows()
 
+indicator_fp <- file.path(
+  file_paths$ocha_dir,
+  "cmr_JIAF1.1_AggregationTemplate_Scenario-B_21Nov15_v3.0-OCHAL17243904.xlsx"
+)
+
+df_indicators <- read_excel(
+  indicator_fp,
+  sheet = "Step 4-Long Data"
+) %>%
+  clean_names()
 
 ########################
 #### DATA WRANGLING ####
@@ -105,7 +115,41 @@ df_cmr <- df_organized %>%
     )
   )
 
+df_cmr_indicator <- df_indicators %>%
+  separate(
+    col = key,
+    into = c("adm2_pcode", "population_group"),
+    sep = "-",
+    extra = "merge"
+  ) %>%
+  left_join(
+    df_ocha_raw %>%
+      select(adm1_name = region, adm2_name = division, adm2_pcode)
+      %>% unique(),
+    by = "adm2_pcode"
+  ) %>%
+  transmute(
+    adm0_name = "Cameroon",
+    adm0_pcode = "CMR",
+    adm1_name,
+    adm1_pcode = substr(adm2_pcode, 1, 6),
+    adm2_name,
+    adm2_pcode,
+    population_group,
+    indicator_number,
+    critical = critical_status == "Yes",
+    indicator_desc = indicator_text,
+    pin = round(calculated_pi_n),
+    severity = calculated_severity
+  )
+
+
 write_csv(
   df_cmr,
   file_paths$save_path
+)
+
+write_csv(
+  df_cmr_indicator,
+  file_paths$save_path_indicator
 )

@@ -27,6 +27,17 @@ df_ocha_raw <- read_excel(
 ) %>%
   clean_names()
 
+ocha_fp <- file.path(
+  file_paths$ocha_dir,
+  "PIN intersectorial_Indicadores_CH_VF2022.xlsx"
+)
+
+df_indicators <- read_excel(
+  ocha_fp,
+  sheet = "FINAL PIN y NODOS",
+  col_names = FALSE
+)
+
 ########################
 #### DATA WRANGLING ####
 ########################
@@ -103,7 +114,51 @@ df_col <- right_join(
   ) %>%
   filter(sector != "san")
 
+indicator_desc <- data.frame(t(df_indicators[c(3,7),]), row.names = NULL) %>%
+  filter(X1 %in% c(1:14))
+
+names(df_indicators) <- paste0(df_indicators[7,], replace_na(as.character(df_indicators[8,]), ""))
+
+df_col_indicator <- df_indicators %>% clean_names() %>%
+  filter(row_number() > 8 & municipio != "X") %>%
+  select(
+    departamento,
+    municipio,
+    crit_1:crit_14,
+    na_cri_1:na_cri_14
+  ) %>% 
+  pivot_longer(
+    cols = matches("^crit|^na_cri"),
+    names_to = c(".value", "indicator"),
+    names_pattern = "(^crit|^na_cri)_(.*)"
+  ) %>%
+  left_join(
+    df_col %>% select(adm1_name, adm1_pcode, adm2_name, adm2_pcode) %>% unique(),
+    by=c("municipio" = "adm2_name")
+  ) %>%
+  left_join(
+    indicator_desc,
+    by = c("indicator" = "X1")
+  ) %>%
+  transmute(
+    adm0_name = "Colombia",
+    adm0_pcode = "COL",
+    adm1_name,
+    adm1_pcode,
+    adm2_name = municipio,
+    adm2_pcode,
+    indicator_number = indicator,
+    indicator_desc = X2,
+    pin = round(as.numeric(crit)),
+    severity = na_cri
+  )
+
 write_csv(
   df_col,
   file_paths$save_path
+)
+
+write_csv(
+  df_col_indicator,
+  file_paths$save_path_indicator
 )

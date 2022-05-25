@@ -7,22 +7,12 @@ file_paths <- get_paths_analysis()
 #### WRANGLING ####
 ###################
 
-df <- map_dfr(
-  list.files(
-    file_paths$input_dir,
-    pattern = ".csv",
-    full.names = TRUE
-  ),
-  read_csv
-) %>%
-  mutate(
-    sector_group = ifelse(
-      source == "cluster",
-      "sectoral_cluster",
-      sector_general
-    ),
-    .before = pin
+df <- read_csv(
+  file.path(
+    file_paths$agg_dir,
+    "2022_sectoral_pins.csv"
   )
+)
 
 # for analysis, create max df that has
 # a row for each lowest admin level and

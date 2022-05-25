@@ -25,8 +25,7 @@ df_ocha_raw <- read_excel(
   skip = 4,
   sheet = "Combined_Intersectoral_PIN"
 ) %>%
-  clean_names() %>%
-  drop_na(adm1_province)
+  drop_na(ADM1_PROVINCE)
 
 ########################
 #### DATA WRANGLING ####
@@ -34,6 +33,7 @@ df_ocha_raw <- read_excel(
 
 
 df_moz <- df_ocha_raw %>%
+  clean_names() %>%
   transmute(
     adm0_name = "Mozambique",
     adm0_pcode = "MOZ",
@@ -78,7 +78,38 @@ df_moz <- df_ocha_raw %>%
     pin = round(pin)
   )
 
+df_moz_indicator <- df_ocha_raw %>%
+  type_convert() %>%
+  pivot_longer(
+    cols = `# of people in IPC phases`:
+    `# of people without access to appropriate hygiene facilities`,
+    values_to = "pin",
+    names_to = "indicator_desc"
+  ) %>%
+  clean_names() %>%
+  transmute(
+    adm0_name = "Mozambique",
+    adm0_pcode = "MOZ",
+    adm1_name = adm1_province,
+    adm1_pcode = adm1_pcode,
+    adm2_name = adm2_district,
+    adm2_pcode = adm2_pcode,
+    indicator_number = as.integer(factor(indicator_desc)),
+    critical = indicator_number %in% c(6, 8, 9, 13, 17),
+    indicator_desc = ifelse(
+      indicator_desc == "...16",
+      "Health Indicator",
+      indicator_desc
+    ),
+    pin = replace_na(round(pin), 0)
+  )
+
 write_csv(
   df_moz,
   file_paths$save_path
+)
+
+write_csv(
+  df_moz_indicator,
+  file_paths$save_path_indicator
 )

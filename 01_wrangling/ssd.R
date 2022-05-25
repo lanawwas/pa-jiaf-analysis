@@ -28,6 +28,12 @@ df_ocha_raw <- read_excel(
 ) %>%
   clean_names()
 
+df_indicators <- read_excel(
+  ocha_fp,
+  sheet = "Step 4-Long Data"
+) %>%
+  clean_names()
+
 ########################
 #### DATA WRANGLING ####
 ########################
@@ -166,20 +172,52 @@ df_organized <- df_ocha_raw %>%
       "intersectoral",
       "sectoral"
     )
-  )
+  ) %>%
+  filter(sex != "total")
 
-# deleting those age-sex groups that don't have any PiN for a specific sectoral PiN
+# deleting those age-sex groups that don't have any PiN for a specific sector
 df_summarized_age_sex <- df_organized %>%
   group_by(sector, age_sex = paste0(age, sex)) %>%
-  summarize(tot_pin = sum(pin, na.rm = T)) %>%
+  summarize(tot_pin = sum(pin, na.rm = TRUE)) %>%
   filter(tot_pin != 0)
 
-df_ssd <- df_organized %>% 
+df_ssd <- df_organized %>%
   filter(
-    paste0(sector, age, sex) %in% paste0(df_summarized_age_sex$sector, df_summarized_age_sex$age_sex)
-  ) 
+    paste0(sector, age, sex) %in% paste0(
+      df_summarized_age_sex$sector,
+      df_summarized_age_sex$age_sex
+    ),
+    age != "total",
+    sex != "total"
+  )
+
+df_ssd_indicator <- df_indicators %>%
+  left_join(
+    df_ssd %>%
+      select(adm1_name, adm1_pcode, adm2_name, adm2_pcode) %>%
+      unique(),
+    by = c("admin_2_p_code" = "adm2_pcode")
+  ) %>%
+  transmute(
+    adm0_name = "South Sudan",
+    adm0_pcode = "SSD",
+    adm1_name,
+    adm1_pcode,
+    adm2_name,
+    adm2_pcode = admin_2_p_code,
+    indicator_number,
+    critical = critical_status == "Yes",
+    indicator_desc = indicator_text,
+    pin = replace_na(round(calculated_pi_n), 0),
+    severity = calculated_severity
+  )
 
 write_csv(
   df_ssd,
   file_paths$save_path
+)
+
+write_csv(
+  df_ssd_indicator,
+  file_paths$save_path_indicator
 )

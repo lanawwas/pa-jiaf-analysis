@@ -39,6 +39,19 @@ df_adm1 <- read_excel(
     adm1_name = admin1Name_en
   )
 
+indicator_fp <- file.path(
+  file_paths$ocha_dir,
+  "Libya - Aggregation File 9Sep2021 HNO 2022.xlsx" # nolint
+)
+
+df_indicators <- read_excel(
+  indicator_fp,
+  skip = 2,
+  sheet = "Step 4-Long Data"
+) %>%
+  clean_names() %>%
+  filter(pcode != "Total")
+
 ########################
 #### DATA WRANGLING ####
 ########################
@@ -48,8 +61,8 @@ df_adm1 <- read_excel(
 
 df_pcodes <- df_ocha_clusters_raw %>%
   select(
-    adm2_en = `ADM2_Manti (EN)`,
-    adm3_en = Balad_ADM3,
+    adm2_name = `ADM2_Manti (EN)`,
+    adm3_name = Balad_ADM3,
     ends_with("Pcode")
   ) %>%
   rename_with(tolower) %>%
@@ -69,7 +82,7 @@ df_ocha_is <- df_ocha_is_raw %>%
   ) %>%
   left_join(
     df_pcodes,
-    by = c("mantika" = "adm2_en", "baladiya" = "adm3_en")
+    by = c("mantika" = "adm2_name", "baladiya" = "adm3_name")
   ) %>%
   select(-key, -mantika, -baladiya) %>%
   mutate(
@@ -115,14 +128,14 @@ df_organized <- bind_rows(
   ) %>%
   select(
     source:adm2_pcode,
-    adm2_en,
+    adm2_name,
     adm3_pcode,
-    adm3_en,
+    adm3_name,
     population_group:pin
   ) %>%
   mutate(
     adm0_pcode = "LBY",
-    adm0_en = "Libya",
+    adm0_name = "Libya",
     adm1_pcode = substr(adm2_pcode, 1, 4),
     .before = adm2_pcode
   ) %>%
@@ -132,10 +145,6 @@ df_organized <- bind_rows(
       "intersectoral",
       "sectoral"
     )
-  ) %>%
-  rename_at(
-    dplyr::vars(ends_with("_en")),
-    ~ str_replace(.x, "_en", "_name")
   ) %>%
   left_join(
     df_adm1,
@@ -149,22 +158,70 @@ df_organized <- bind_rows(
 # deleting those areas that don't have any PiN for a specific group
 df_summarized_pops <- df_organized %>%
   group_by(adm3_name, population_group) %>%
-  summarise(tot_pin = sum(pin, na.rm = T)) %>%
+  summarise(tot_pin = sum(pin, na.rm = TRUE)) %>%
   filter(tot_pin != 0)
 
-# deleting those age-sex groups that don't have any PiN for a specific sectoral PiN
+# deleting those age-sex groups that don't have any PiN for a specific sector
 df_summarized_age_sex <- df_organized %>%
   group_by(sector, age_sex = paste0(age, sex)) %>%
-  summarize(tot_pin = sum(pin, na.rm = T)) %>%
+  summarize(tot_pin = sum(pin, na.rm = TRUE)) %>%
   filter(tot_pin != 0)
 
-df_lby <- df_organized %>% 
+df_lby <- df_organized %>%
   filter(
-    paste0(adm3_name, population_group) %in% paste0(df_summarized_pops$adm3_name, df_summarized_pops$population_group),
-    paste0(sector, age, sex) %in% paste0(df_summarized_age_sex$sector, df_summarized_age_sex$age_sex)
-  ) 
+    paste0(adm3_name, population_group) %in% paste0(
+      df_summarized_pops$adm3_name,
+      df_summarized_pops$population_group
+    ),
+    paste0(sector, age, sex) %in% paste0(
+      df_summarized_age_sex$sector,
+      df_summarized_age_sex$age_sex
+    )
+  )
+
+df_lby_indicator <- df_indicators %>%
+  separate(
+    col = key,
+    into = c("adm3_name", "population_group"),
+    sep = "-", extra = "merge"
+  ) %>%
+  left_join(
+    df_lby %>%
+      select(
+        starts_with("adm")
+      ) %>%
+      unique(),
+    by = c("pcode" = "adm3_pcode", "adm3_name")
+  ) %>%
+  # indicator 19 is all blank caused by an error from the file
+  filter(indicator_number != 19) %>%
+  transmute(
+    adm0_name = "Libya",
+    adm0_pcode = "LBY",
+    adm1_name,
+    adm1_pcode,
+    adm2_name,
+    adm2_pcode,
+    adm3_name,
+    adm3_pcode = pcode,
+    population_group,
+    indicator_number = ifelse(
+      indicator_number > 19,
+      indicator_number - 1,
+      indicator_number
+    ),
+    critical = critical_status == "Yes",
+    indicator_desc = indicator_text,
+    pin = round(calculated_pi_n),
+    severity = calculated_severity
+  )
 
 write_csv(
   df_lby,
   file_paths$save_path
+)
+
+write_csv(
+  df_lby_indicator,
+  file_paths$save_path_indicator
 )
