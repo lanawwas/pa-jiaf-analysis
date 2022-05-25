@@ -48,3 +48,22 @@ sectoral_df %>%
       "2022_sectoral_pins.csv"
     )
   )
+
+# Indicator PiNs
+
+df_indicators <- map_dfr(
+  list.files(
+    file_paths$input_indicator_dir,
+    pattern = ".csv",
+    full.names = TRUE
+  ),
+  ~ read_csv(.) %>% mutate(indicator_number = as.character(indicator_number))
+)
+
+df_indicators %>%
+  write_csv(
+    file.path(
+      file_paths$input_indicator_dir,
+      "2022_indicator_pins.csv"
+    )
+  )
