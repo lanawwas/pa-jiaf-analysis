@@ -209,7 +209,7 @@ df_ssd_indicator <- df_indicators %>%
       ifelse(critical_status == "Yes", "_critical", "")
     ),
     indicator_desc = indicator_text,
-    pin = round(calculated_pi_n),
+    pin = replace_na(round(calculated_pi_n), 0),
     severity = calculated_severity
   )
 
