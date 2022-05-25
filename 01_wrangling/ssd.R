@@ -175,20 +175,27 @@ df_organized <- df_ocha_raw %>%
   ) %>%
   filter(sex != "total")
 
-# deleting those age-sex groups that don't have any PiN for a specific sectoral PiN
+# deleting those age-sex groups that don't have any PiN for a specific sector
 df_summarized_age_sex <- df_organized %>%
   group_by(sector, age_sex = paste0(age, sex)) %>%
-  summarize(tot_pin = sum(pin, na.rm = T)) %>%
+  summarize(tot_pin = sum(pin, na.rm = TRUE)) %>%
   filter(tot_pin != 0)
 
-df_ssd <- df_organized %>% 
+df_ssd <- df_organized %>%
   filter(
-    paste0(sector, age, sex) %in% paste0(df_summarized_age_sex$sector, df_summarized_age_sex$age_sex)
-  ) 
+    paste0(sector, age, sex) %in% paste0(
+      df_summarized_age_sex$sector,
+      df_summarized_age_sex$age_sex
+    ),
+    age != "total",
+    sex != "total"
+  )
 
 df_ssd_indicator <- df_indicators %>%
   left_join(
-    df_ssd %>% select(adm1_name , adm1_pcode, adm2_name, adm2_pcode) %>% unique(),
+    df_ssd %>%
+      select(adm1_name, adm1_pcode, adm2_name, adm2_pcode) %>%
+      unique(),
     by = c("admin_2_p_code" = "adm2_pcode")
   ) %>%
   transmute(
@@ -198,9 +205,12 @@ df_ssd_indicator <- df_indicators %>%
     adm1_pcode,
     adm2_name,
     adm2_pcode = admin_2_p_code,
-    indicator_number = paste0(indicator_number, ifelse(critical_status == "Yes", "_critical", "")),
+    indicator_number = paste0(
+      indicator_number,
+      ifelse(critical_status == "Yes", "_critical", "")
+    ),
     indicator_desc = indicator_text,
-    pin = round(calculated_pi_n),
+    pin = replace_na(round(calculated_pi_n), 0),
     severity = calculated_severity
   )
 
