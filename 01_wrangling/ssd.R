@@ -172,7 +172,8 @@ df_organized <- df_ocha_raw %>%
       "intersectoral",
       "sectoral"
     )
-  )
+  ) %>%
+  filter(sex != "total")
 
 # deleting those age-sex groups that don't have any PiN for a specific sectoral PiN
 df_summarized_age_sex <- df_organized %>%
