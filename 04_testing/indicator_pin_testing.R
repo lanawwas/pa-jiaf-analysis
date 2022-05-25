@@ -12,8 +12,12 @@ df_indicators <- read_csv(file.path(
   "2022_indicator_pins.csv"
 ))
 
-df_sectors <-
-  read_csv(file.path(file_paths$output_dir, "2022_hno_pin_totals.csv")) %>%
+df_sectors <- read_csv(
+  file.path(
+    file_paths$output_dir,
+    "2022_hno_pin_totals.csv"
+  )
+) %>%
   filter(adm0_name %in% df_indicators$adm0_name) %>%
   rename(pin_calculation = sector_group)
 
@@ -106,7 +110,7 @@ df_indicator_pin %>%
     )
   ) +
   theme_light() +
-  scale_y_continuous(labels = scales::comma, expand = expansion(c(0, .2))) +
+  scale_y_continuous(labels = \(x) paste0(x, "M")) +
   scale_x_discrete(
     labels = function(x) {
       str_wrap(x, width = 35)
@@ -150,12 +154,11 @@ df_sectors %>%
   ggplot(aes(
     y = reorder(adm0_pcode, pin_diff),
     x = pin_diff,
-    fill = pin_diff,
     label = paste0(pin_diff, "M")
   ), ) +
   scale_fill_distiller(type = "seq", direction = 1) +
   geom_col() +
-  scale_x_continuous(labels = scales::comma) +
+  scale_x_continuous(labels = \(x) paste0(x, "M")) +
   theme_minimal() +
   theme(
     axis.title.y = element_blank(),
@@ -197,8 +200,7 @@ df_sectors %>%
   mutate(pin_diff = ind_pin - pin) %>%
   ggplot(aes(
     y = reorder(adm0_pcode, pin_diff),
-    x = pin_diff,
-    fill = pin_diff
+    x = pin_diff
   ), ) +
   scale_fill_continuous() +
   geom_col() +
@@ -236,11 +238,13 @@ df_sectors %>%
     transmute(adm0_name,
       ind_pin = pin
     )) %>%
-  mutate(pin_diff = round((ind_pin - pin) / pin, 2) * 100) %>%
+  mutate(
+    pin_diff = round((ind_pin - pin) / pin, 2) * 100,
+    pin_diff_label = pmax(pin_diff, -3)
+  ) %>%
   ggplot(aes(
     y = reorder(adm0_pcode, pin_diff),
     x = pin_diff,
-    fill = pin_diff,
     label = paste0(pin_diff, "%")
   ), ) +
   scale_fill_distiller(type = "seq", direction = 1) +
@@ -265,6 +269,9 @@ df_sectors %>%
     )
   ) +
   geom_text(
+    aes(
+      x = pin_diff_label
+    ),
     position = position_identity(),
     hjust = -.3,
     size = 4
