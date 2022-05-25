@@ -17,7 +17,7 @@ get_paths <- function(country, country_name = NULL) {
   if (is.null(country_name)) {
     country_name <- country
   }
-
+  
   # iso3 for use in save path
   iso3 <- tolower( # nolint
     countrycode::countryname(
@@ -25,47 +25,63 @@ get_paths <- function(country, country_name = NULL) {
       destination = "iso3c"
     )
   )
-
+  
   data_dir <- Sys.getenv("JIAF_DATA_DIR")
-
+  
   # directory with ocha provided data
   ocha_dir <- file.path(
     data_dir,
     "Data from country offices - OCHA",
     country
   )
-
+  
   # directory with cluster provided data
   cluster_dir <- file.path(
     data_dir,
     "Data from country offices - Clusters",
     country
   )
-
-  # file path to save pin data
+  
+  # file path to save sectoral pin data
   save_path <- file.path(
     data_dir,
     aggregated_data_dir,
-    glue::glue("{iso3}_pins_2022.csv")
+    glue::glue("sectoral_pins/{iso3}_pins_2022.csv")
   )
-
+  
+  # file path to save indicator pin data
+  save_path_indicator <- file.path(
+    data_dir,
+    aggregated_data_dir,
+    glue::glue("indicator_pins/{iso3}_pins_2022.csv")
+  )
+  
+  # file path to save hh data
+  save_path_hh_data <- file.path(
+    data_dir,
+    aggregated_data_dir,
+    glue::glue("hh_data/{iso3}_hh_data_2022.csv")
+  )
+  
   list(
     ocha_dir = ocha_dir,
     cluster_dir = cluster_dir,
-    save_path = save_path
+    save_path = save_path,
+    save_path_hh_data = save_path_hh_data,
+    save_path_indicator = save_path_indicator
   )
 }
 
 get_paths_analysis <- function() {
-
+  
   # TODO: Make name of this a constant
   data_dir <- Sys.getenv("JIAF_DATA_DIR")
-
+  
   input_dir <- file.path(
     data_dir,
     aggregated_data_dir
   )
-
+  
   output_dir <- file.path(
     data_dir,
     "Data analyzed"

@@ -42,6 +42,13 @@ df_ocha_pcode_extract <- read_excel(
 ) %>%
   clean_names()
 
+df_indicators <- read_excel(
+  ocha_fp,
+  skip = 2,
+  sheet = "Step 4-Long Data"
+) %>%
+  clean_names()
+
 ########################
 #### DATA WRANGLING ####
 ########################
@@ -98,14 +105,41 @@ df_summarized_pops <- df_all %>%
   summarise(tot_pin = sum(pin, na.rm = T)) %>%
   filter(tot_pin != 0)
 
-df_bdi <- df_all %>% 
+df_bdi <- df_all %>%
   filter(
-    paste0(adm1_name, population_group) %in% paste0(df_summarized_pops$adm1_name, df_summarized_pops$population_group)) %>%
-  mutate(
-    pin = round(pin, 0)
+    paste0(adm1_name, population_group) %in% paste0(
+      df_summarized_pops$adm1_name,
+      df_summarized_pops$population_group
+    )
+  ) %>%
+  mutate(pin = round(pin, 0))
+
+df_bdi_indicator <- df_indicators %>%
+  separate(col = key, c("adm2_name", "population_group"), sep = "_") %>%
+  left_join(
+    df_ocha_pcode_extract %>% select(adm1_state, adm1_pcode, adm2_county, adm2_pcode) %>% unique(),
+    by = c("adm2_pcode", "adm2_name" = "adm2_county")
+  ) %>%
+  transmute(
+    adm0_name = "Burundi",
+    adm0_pcode = "BDI",
+    adm1_name = adm1_state,
+    adm1_pcode,
+    adm2_name,
+    adm2_pcode,
+    population_group,
+    indicator_number = paste0(indicator_number, ifelse(critical_status == "Oui", "_critical", "")),
+    indicator_desc = indicator_text,
+    pin = round(calculated_pi_n),
+    severity = calculated_severity
   )
 
 write_csv(
   df_bdi,
   file_paths$save_path
+)
+
+write_csv(
+  df_bdi_indicator,
+  file_paths$save_path_indicator
 )
