@@ -44,7 +44,7 @@ sectoral_df <- map_dfr(
 sectoral_df %>%
   write_csv(
     file.path(
-      file_paths$input_dir,
+      file_paths$agg_dir,
       "2022_sectoral_pins.csv"
     )
   )
@@ -63,7 +63,7 @@ df_indicators <- map_dfr(
 df_indicators %>%
   write_csv(
     file.path(
-      file_paths$input_indicator_dir,
+      file_paths$agg_dir,
       "2022_indicator_pins.csv"
     )
   )
