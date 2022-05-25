@@ -203,7 +203,11 @@ df_lby_indicator <- df_indicators %>%
     adm2_name,
     adm2_pcode,
     adm3_name,
-    adm3_pcode = pcode,
+    adm3_pcode = ifelse(
+      adm3_name == "Misrata", # fix error in one of the rows
+      "LY021405",
+      pcode
+    ),
     population_group,
     indicator_number = ifelse(
       indicator_number > 19,
