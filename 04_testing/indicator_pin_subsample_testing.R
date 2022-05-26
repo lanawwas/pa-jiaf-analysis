@@ -193,3 +193,153 @@ ggsave(
   height = 10,
   width = 12
 )
+
+# plotting number of times an indicator is max
+
+df_prepped %>%
+  slice_max(
+    pin
+  ) %>%
+  group_by(
+    adm0_name,
+    indicator_desc
+  ) %>%
+  summarize(
+    times_max = n(),
+    .groups = "drop_last"
+  ) %>%
+  arrange(
+    desc(times_max),
+    .by_group = TRUE
+  ) %>%
+  mutate(
+    indicator_desc_label = case_when( # nolint start
+      indicator_desc == "IPC" ~ "IPC",
+      indicator_desc == "Prévalence en % de l’allaitement exclusif chez les enfants de 0-5 mois" ~ "% breastfeeding children",
+      indicator_desc == "%  d'épisodes  de paludisme" ~ "% malaria",
+      indicator_desc == "% of girls / women /boys /men  without access to GBV-related services." ~ "% access to GBV",
+      indicator_desc == "Number of cases or incidence rates for selected diseases relevant to the local context (malaria, COVID, others outbreak prone diseases)" ~ "Disease incidence rate",
+      indicator_desc == "Cadre Harmonisé" ~ "IPC (CH)",
+      indicator_desc == "Afectación por conflicto armado" ~ "Affected by armed conflict",
+      indicator_desc == "Pobreza multidimensional" ~ "Multidimensional poverty",
+      indicator_desc == "Acceso a agua" ~ "Access to water",
+      indicator_desc == "ipc" ~ "IPC",
+      indicator_desc == "clean_water_access" ~ "Access to water",
+      indicator_desc == "disaster_house_damage" ~ "Damage to house",
+      indicator_desc == "Food Security Index (CARI)" ~ "Food security (CARI)",
+      indicator_desc == "Indicator 1: [% of HHs withouth access to an improved and accessible sufficent drinking water source (bottle water, public network, water tracking, protective well and tap accessible to the public)] + Indicator 3: [% of HHs without access to functional and accessible" ~ "Access to water",
+      indicator_desc == "% of girls / boys without access to core CP services" ~ "% access to CP services",
+      indicator_desc == "Health Indicator" ~ "Health",
+      indicator_desc == "Indicator 1+2+3" ~ "Protection",
+      indicator_desc == "# of Individuals currently living in unsustainable shelter situations" ~ "Poor shelter",
+      indicator_desc == "# of people in IPC phases" ~ "IPC",
+      indicator_desc == "% of school-aged children dropping out of school in the previous school year" ~ "School drop outs",
+      indicator_desc == "Average time needed by school-enrolled children to access the nearest education facility" ~ "Time to access school",
+      indicator_desc == "Number of HF with Basic Emergency Obstetric Care/ 500,000 population, by administrative unit" ~ "Health facilities with obstetrics",
+      indicator_desc == "% of persons living in areas with mine/UXO contamination" ~ "Mine/UXO exposure",
+      indicator_desc == "Proportion of oxygen beds occupied with COVID-19 patients" ~ "% oxygen beds with COVID-19 patients",
+      indicator_desc == "% of IDPs who have to limit expenses even for food or have funds only for food" ~ "% IDPs limited money for food",
+      TRUE ~ " "
+    ),
+    x_pct = 2 / n()
+  ) %>% # nolint end
+  ggplot(
+    aes(
+      x = times_max,
+      y = reorder(indicator_desc, times_max)
+    )
+  ) +
+  geom_bar(
+    stat = "identity",
+    fill = "#ef6666"
+  ) +
+  facet_wrap(
+    ~adm0_name,
+    scales = "free"
+  ) +
+  geom_text(
+    aes(
+      label = indicator_desc_label,
+      x = x_pct
+    ),
+    hjust = 0
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.y = element_blank(),
+    plot.background = element_rect(fill = "white")
+  ) +
+  labs(
+    y = "",
+    x = "# of times indicator PiN was maximum",
+    title = "Times an indicator PiN was maximum PiN in calculation"
+  )
+
+
+ggsave(
+  file.path(
+    file_paths$output_dir,
+    "2022_indicator_max_times.png"
+  ),
+  height = 10,
+  width = 12
+)
+
+# Percent of indicators used for max
+
+df_max_pct <- df_prepped %>%
+  mutate(
+    num_pins = max(indicator_number)
+  ) %>%
+  slice_max(
+    pin
+  ) %>%
+  group_by(
+    adm0_name
+  ) %>%
+  summarize(
+    max_pins = length(unique(indicator_number)),
+    num_pins = unique(num_pins),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    pct_max_pins = max_pins / num_pins
+  )
+
+df_max_pct %>%
+  ggplot(
+    aes(
+      x = pct_max_pins,
+      y = reorder(adm0_name, pct_max_pins)
+    )
+  ) +
+  geom_bar(stat = "identity") +
+  scale_x_continuous(
+    labels = scales::percent_format()
+  ) +
+  theme_minimal() +
+  theme(
+    plot.background = element_rect(fill = "white")
+  ) +
+  labs(
+    y = "",
+    x = "% of indicator PiNs",
+    title = "% of indicator PiNs ever used in max calculation"
+  )
+
+ggsave(
+  file.path(
+    file_paths$output_dir,
+    "2022_indicator_max_pct_pins.png"
+  ),
+  height = 5,
+  width = 8
+)
+
+df_max_pct %>%
+  write_csv(
+    file.path(
+      file_paths$output_dir,
+      "2022_indicator_max_pct_pins.csv"
+    )
+  )
