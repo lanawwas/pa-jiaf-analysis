@@ -333,7 +333,7 @@ bar_chart <-
       "and sectoral PiN"
     )
   ) +
-  theme_light() +
+  theme_minimal() +
   scale_y_continuous(
     labels = function(x) paste0(x, "M"),
     expand = expansion(c(0, .2))
@@ -350,8 +350,11 @@ bar_chart <-
     plot.title = element_text(
       face = "bold",
       size = 22,
-      margin = margin(10, 10, 30, 10, "pt"),
+      margin = margin(10, 10, 10, 10, "pt"),
       family = "Roboto"
+    ),
+    plot.background = element_rect(
+      fill = "white"
     ),
     axis.text = element_text(
       face = "bold",
@@ -363,9 +366,7 @@ bar_chart <-
       family = "Roboto"
     ),
     legend.position = "bottom",
-    panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    panel.background = element_rect(fill = "transparent"),
     legend.background = element_rect(fill = "transparent"),
     legend.box.background = element_rect(fill = "transparent"),
     strip.text = element_text(
@@ -377,15 +378,21 @@ bar_chart <-
 ggsave(
   file.path(
     file_paths$output_dir,
+    "graphs",
+    "sectoral_pins",
     "2022_hh_data_aggregations.png"
   ),
   bg = "transparent",
-  height = 13,
-  width = 25,
+  height = 8,
+  width = 15,
   plot = bar_chart
 )
 
 write_csv(
   pin_all,
-  file.path(file_paths$output_dir, "/2022_hh_data_aggregated_pin.csv")
+  file.path(
+    file_paths$output_dir,
+    "datasets",
+    "2022_hh_data_aggregated_pin.csv"
+  )
 )

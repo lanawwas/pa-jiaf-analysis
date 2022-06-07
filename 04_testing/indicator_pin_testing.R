@@ -112,7 +112,7 @@ df_indicator_pin %>%
       "Indicator PiN and Max of Sectoral"
     )
   ) +
-  theme_light() +
+  theme_minimal() +
   scale_y_continuous(labels = function(x) paste0(x, "M")) +
   scale_x_discrete(
     labels = function(x) {
@@ -306,7 +306,7 @@ ggsave(
     "2022_absolute_compr_indicator_sectoral.png"
   ),
   height = 6,
-  width = 8
+  width = 14
 )
 
 # percent comparison between indicator PiN and sectoral PiN

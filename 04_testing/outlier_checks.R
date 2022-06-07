@@ -450,6 +450,8 @@ df_max_min %>%
 ggsave(
   file.path(
     file_paths$output_dir,
+    "graphs",
+    "sectoral_pins",
     "2022_perc_diff_max_min_pin.png"
   ),
   height = 13,
@@ -525,6 +527,8 @@ df_small_clusters %>%
 ggsave(
   file.path(
     file_paths$output_dir,
+    "graphs",
+    "sectoral_pins",
     "2022_percentage_pin_density_subpop_sectors.png"
   ),
   height = 13,
@@ -546,9 +550,7 @@ df_max_min %>%
   ) %>%
   ggplot(
     aes(
-      x = reorder_within(
-        sectors,
-      ),
+      x = sectors,
       fill = modes
     )
   ) +
@@ -598,6 +600,8 @@ df_max_min %>%
 ggsave(
   file.path(
     file_paths$output_dir,
+    "graphs",
+    "sectoral_pins",
     "2022_frequency_of_sectors_being_max.png"
   ),
   height = 13,

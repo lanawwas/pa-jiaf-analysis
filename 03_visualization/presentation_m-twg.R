@@ -1,6 +1,4 @@
-library(ggplot2)
 library(tidyverse)
-library(stringr)
 library(scales)
 
 source(here::here("99_helpers", "helpers.R"))
