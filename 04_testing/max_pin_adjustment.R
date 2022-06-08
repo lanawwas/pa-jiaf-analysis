@@ -14,11 +14,11 @@ df_sectors <- read_csv(
     "2022_hno_pin_cluster_totals.csv"
   )
 ) %>%
-  mutate_at(
-    .vars = vars(matches("adm[1-3]")),
-    .funs = tolower
-  ) %>%
   mutate(
+    across(
+      .cols = matches("adm[1-3]"),
+      .fns = tolower
+    ),
     adm_name = case_when(
       adm0_pcode == "COL" ~ adm1_name,
       !is.na(adm3_name) ~ adm3_name,
@@ -34,25 +34,36 @@ df_sectors <- read_csv(
   ) %>%
   summarize(
     pin = sum(pin, na.rm = TRUE),
-    affected_population = sum(affected_population, na.rm = TRUE)
+    affected_population = sum(affected_population, na.rm = TRUE),
+    .groups = "drop"
   ) %>%
   mutate(
     affected_population =
-      ifelse(affected_population < pin, pin, affected_population)
+      ifelse(
+        affected_population < pin,
+        pin,
+        affected_population
+      )
   )
 
-df_msna <- read.csv(file.path("../MSNA_data.csv")) %>%
-  mutate_at(
-    .vars = vars(protection_lsg:livelihoods_lsg),
-    .funs = as.numeric
-  ) %>%
+df_msna <- read_csv(
+  file.path(
+    dirname(getwd()),
+    "MSNA_data.csv"
+  )
+) %>%
   mutate(
-    admin1 = gsub("[ ]|[-]|[.]|[_]|[,]", "", tolower(admin1)),
-    admin2_hno = gsub("[ ]|[-]|[.]|[_]|[,]", "", tolower(admin2_hno)),
-    admin3_hno = gsub("[ ]|[-]|[.]|[_]|[,]", "", tolower(admin3_hno))
+    across(
+      .cols = protection_lsg:livelihoods_lsg,
+      .fns = ~ ifelse(.x == "4+", 5, as.numeric(.x))
+    ),
+    across(
+      .cols = matches("admin[1-3]"),
+      .fns = ~ tolower(iconv(.x, "UTF-8", "ASCII"))
+    )
   ) %>%
   pivot_longer(
-    cols = matches("_lsg"),
+    cols = ends_with("_lsg"),
     names_to = "sector",
     values_to = "severity"
   ) %>%
@@ -60,7 +71,7 @@ df_msna <- read.csv(file.path("../MSNA_data.csv")) %>%
     !is.na(severity),
     admin0 %in% df_sectors$adm0_pcode
   ) %>%
-  transmute(
+  mutate(
     uuid,
     adm0_pcode = admin0,
     adm_name = case_when(
@@ -219,7 +230,9 @@ ggplot(
     strip.position = "bottom",
     scales = "free_x"
   ) +
-  geom_col() +
+  geom_col(
+    fill = "#1EBFB3"
+  ) +
   geom_text(
     position = position_identity(),
     hjust = -.2,
@@ -234,7 +247,7 @@ ggplot(
       "and sectoral PiN"
     )
   ) +
-  theme_light() +
+  theme_minimal() +
   scale_y_continuous(
     labels = function(x) paste0(x, "M"),
     expand = expansion(c(0, .2))
@@ -248,8 +261,11 @@ ggplot(
     plot.title = element_text(
       face = "bold",
       size = 22,
-      margin = margin(10, 10, 30, 10, "pt"),
+      margin = margin(10, 10, 10, 10, "pt"),
       family = "Roboto"
+    ),
+    plot.background = element_rect(
+      fill = "white"
     ),
     axis.text = element_text(
       face = "bold",
@@ -261,9 +277,7 @@ ggplot(
       family = "Roboto"
     ),
     legend.position = "bottom",
-    panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    panel.background = element_rect(fill = "transparent"),
     legend.background = element_rect(fill = "transparent"),
     legend.box.background = element_rect(fill = "transparent"),
     strip.text = element_text(
