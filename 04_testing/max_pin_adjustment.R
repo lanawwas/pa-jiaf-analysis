@@ -305,7 +305,7 @@ write_csv(
   file.path(
     file_paths$output_dir,
     "graphs",
-    "sectoral_pins",
+    "Option 1",
     "datasets",
     "2022_max_pin_adj_by_msna.csv"
   )
