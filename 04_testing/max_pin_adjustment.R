@@ -39,7 +39,8 @@ df_sectors <- read_csv(
   ) %>%
   mutate(
     affected_population = max(round(affected_population))
-  )
+  ) %>%
+  ungroup()
 
 df_msna <- read_csv(
   file.path(
@@ -58,7 +59,11 @@ df_msna <- read_csv(
     ),
     across(
       .cols = matches("admin[1-3]"),
-      .fns = ~ tolower(iconv(.x, "UTF-8", "ASCII"))
+      .fns = ~ gsub(
+        "[ ]|[-]|[.]|[_]|[,]",
+        "",
+        tolower(stringi::stri_trans_general(.x, "latin-ascii"))
+      )
     )
   ) %>%
   pivot_longer(
@@ -70,7 +75,7 @@ df_msna <- read_csv(
     !is.na(severity),
     admin0 %in% df_sectors$adm0_pcode
   ) %>%
-  mutate(
+  transmute(
     uuid,
     adm0_pcode = admin0,
     adm_name = case_when(
@@ -192,7 +197,8 @@ df_msna_anlyse %>%
     max_pin = sum(round(max_pin)),
     pin_adj_all_other = sum(round(pin_adj_all_other)),
     pin_adj_second_max = sum(round(pin_adj_second_max)),
-    affected_population = sum(round(affected_population))
+    affected_population = sum(round(affected_population)),
+    .groups = "drop"
   ) %>%
   pivot_longer(
     cols = -adm0_pcode,
@@ -201,17 +207,17 @@ df_msna_anlyse %>%
   mutate(
     pin_type = case_when(
       pin_type == "affected_population" ~ "Targeted population",
-      pin_type == "max_pin" ~ paste0(
+      pin_type == "max_pin" ~ paste(
         "Max sectoral PiN",
-        "(disaggregated only at admin level)"
+        "(no adjustment)"
       ),
-      pin_type == "pin_adj_all_other" ~ paste0(
+      pin_type == "pin_adj_all_other" ~ paste(
         "Max sectoral PiN",
-        "(adjusted by non overlap needs with all other sectors)"
+        "(adjusted by non-overlapping needs with all other sectors)"
       ),
-      pin_type == "pin_adj_second_max" ~ paste0(
+      pin_type == "pin_adj_second_max" ~ paste(
         "Max sectoral PiN",
-        "(adjusted by non overlap needs with second max sector)"
+        "(adjusted by non-overlapping needs with second max sector)"
       )
     ),
     value = round(value / 1000000, 2)
@@ -237,10 +243,9 @@ df_msna_anlyse %>%
   coord_flip() +
   labs(
     x = "",
-    y = "PIN",
+    y = "PiN",
     title = paste0(
-      "Option 3: Comparison of HH severity aggregation, indicator PiN, ",
-      "and sectoral PiN"
+      "Impact of accounting for overlap on sectoral PiN"
     )
   ) +
   theme_minimal() +
@@ -291,9 +296,8 @@ ggsave(
     "sectoral_pins",
     "2022_max_pin_adj_by_msna.png"
   ),
-  bg = "transparent",
-  height = 13,
-  width = 25
+  height = 8,
+  width = 12
 )
 
 write_csv(
