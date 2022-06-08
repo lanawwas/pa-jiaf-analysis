@@ -38,12 +38,7 @@ df_sectors <- read_csv(
     .groups = "drop"
   ) %>%
   mutate(
-    affected_population =
-      ifelse(
-        affected_population < pin,
-        pin,
-        affected_population
-      )
+    affected_population = max(round(affected_population))
   )
 
 df_msna <- read_csv(
@@ -55,7 +50,11 @@ df_msna <- read_csv(
   mutate(
     across(
       .cols = protection_lsg:livelihoods_lsg,
-      .fns = ~ ifelse(.x == "4+", 5, as.numeric(.x))
+      .fns = ~ case_when(
+        . == "4+" ~ 5,
+        is.na(.) ~ NA_real_,
+        TRUE ~ as.numeric(.)
+      )
     ),
     across(
       .cols = matches("admin[1-3]"),
@@ -75,12 +74,10 @@ df_msna <- read_csv(
     uuid,
     adm0_pcode = admin0,
     adm_name = case_when(
-      !is.na(admin3_hno) &
-        admin3_hno %in% unique(df_sectors$adm_name) ~ admin3_hno,
-      !is.na(admin2_hno) &
-        admin2_hno %in% unique(df_sectors$adm_name) ~ admin2_hno,
+      !is.na(admin3_hno) ~ admin3_hno,
       admin2_hno == "baidoa" ~ "baydhaba",
-      !is.na(admin1) & admin1 %in% unique(df_sectors$adm_name) ~ admin1
+      !is.na(admin2_hno) ~ admin2_hno,
+      !is.na(admin1) ~ admin1
     ),
     sector = case_when(
       sector == "edu_lsg" ~ "Education",
@@ -104,13 +101,14 @@ df_max_sectors <- df_sectors %>%
   group_by(
     adm0_pcode,
     adm_name,
+    affected_population,
     .drop = TRUE
   ) %>%
   slice_max(order_by = pin, n = 2, with_ties = FALSE) %>%
   transmute(
     adm0_pcode,
     adm_name,
-    affected_population = affected_population[1],
+    affected_population,
     max_pin = pin[1],
     max_sector = sector[1],
     second_max_pin = pin[2],
@@ -123,6 +121,7 @@ df_msna_anlyse <- df_msna %>%
     df_max_sectors,
     by = c("adm0_pcode", "adm_name")
   ) %>%
+  filter(!is.na(affected_population)) %>%
   mutate(
     inneed_max = ifelse(sector == max_sector &
       inneed == 1, 1, 0),
@@ -166,27 +165,29 @@ df_msna_anlyse <- df_msna %>%
     affected_population
   ) %>%
   summarize(
-    inneed_second_max = weighted.mean(inneed_second_max, w = weight),
-    inneed_other = weighted.mean(inneed_other, w = weight),
+    perc_second_max_nonoverlap = weighted.mean(inneed_second_max, weight),
+    perc_all_other_sectors_nonoverlap = weighted.mean(inneed_other, weight),
     .groups = "drop"
   ) %>%
   mutate(
-    pin_adj_second_max = max_pin + (affected_population * inneed_second_max),
+    pin_adj_second_max = max_pin +
+      (affected_population * perc_second_max_nonoverlap),
     pin_adj_second_max = ifelse(
       pin_adj_second_max > affected_population,
       affected_population,
       pin_adj_second_max
     ),
-    pin_adj_all_other = max_pin + (affected_population * inneed_other),
+    pin_adj_all_other = max_pin +
+      (affected_population * perc_all_other_sectors_nonoverlap),
     pin_adj_all_other = ifelse(
       pin_adj_all_other > affected_population,
       affected_population,
       pin_adj_all_other
-    ),
-  ) %>%
-  group_by(
-    adm0_pcode
-  ) %>%
+    )
+  )
+
+df_msna_anlyse %>%
+  group_by(adm0_pcode) %>%
   summarise(
     max_pin = sum(round(max_pin)),
     pin_adj_all_other = sum(round(pin_adj_all_other)),
@@ -195,38 +196,33 @@ df_msna_anlyse <- df_msna %>%
   ) %>%
   pivot_longer(
     cols = -adm0_pcode,
-    names_to = "aggregation_method"
+    names_to = "pin_type"
   ) %>%
   mutate(
-    aggregation_method = case_when(
-      aggregation_method == "affected_population" ~ "Targeted population",
-      aggregation_method == "max_pin" ~ paste0(
+    pin_type = case_when(
+      pin_type == "affected_population" ~ "Targeted population",
+      pin_type == "max_pin" ~ paste0(
         "Max sectoral PiN",
         "(disaggregated only at admin level)"
       ),
-      aggregation_method == "pin_adj_all_other" ~ paste0(
+      pin_type == "pin_adj_all_other" ~ paste0(
         "Max sectoral PiN",
         "(adjusted by non overlap needs with all other sectors)"
       ),
-      aggregation_method == "pin_adj_second_max" ~ paste0(
+      pin_type == "pin_adj_second_max" ~ paste0(
         "Max sectoral PiN",
         "(adjusted by non overlap needs with second max sector)"
       )
     ),
     value = round(value / 1000000, 2)
   ) %>%
-  arrange(adm0_pcode, desc(value))
-
-ggplot(
-  df_msna_anlyse,
-  aes(
+  arrange(adm0_pcode, desc(value)) %>%
+  ggplot(aes(
     y = value,
-    x = reorder(aggregation_method, +value),
+    x = reorder(pin_type, +value),
     label = paste0(value, "M")
-  )
-) +
-  facet_wrap(
-    ~adm0_pcode,
+  )) +
+  facet_wrap(~adm0_pcode,
     strip.position = "bottom",
     scales = "free_x"
   ) +
@@ -249,7 +245,9 @@ ggplot(
   ) +
   theme_minimal() +
   scale_y_continuous(
-    labels = function(x) paste0(x, "M"),
+    labels = function(x) {
+      paste0(x, "M")
+    },
     expand = expansion(c(0, .2))
   ) +
   scale_x_discrete(
@@ -289,10 +287,19 @@ ggplot(
 ggsave(
   file.path(
     file_paths$output_dir,
-    "2022_hh_data_aggregations.png"
+    "graphs",
+    "2022_max_pin_adj_by_msna.png"
   ),
   bg = "transparent",
   height = 13,
-  width = 25,
-  plot = bar_chart
+  width = 25
+)
+
+write_csv(
+  df_msna_anlyse,
+  file.path(
+    file_paths$output_dir,
+    "datasets",
+    "2022_max_pin_adj_by_msna.csv"
+  )
 )
