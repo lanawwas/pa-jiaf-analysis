@@ -35,7 +35,7 @@ df_sectors <- read_csv(
   summarize(
     pin = sum(pin, na.rm = TRUE),
     affected_population = sum(affected_population, na.rm = TRUE),
-    .groups = "drop"
+    .groups = "drop_last"
   ) %>%
   mutate(
     affected_population = max(round(affected_population))
@@ -288,6 +288,7 @@ ggsave(
   file.path(
     file_paths$output_dir,
     "graphs",
+    "sectoral_pins",
     "2022_max_pin_adj_by_msna.png"
   ),
   bg = "transparent",
@@ -299,6 +300,8 @@ write_csv(
   df_msna_anlyse,
   file.path(
     file_paths$output_dir,
+    "graphs",
+    "sectoral_pins",
     "datasets",
     "2022_max_pin_adj_by_msna.csv"
   )
