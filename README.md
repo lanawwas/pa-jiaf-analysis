@@ -1,6 +1,6 @@
 # JIAF analysis
 
-All of our fun JIAF analysis. Nothing more. Didn't create in OCHA-DAP because couldn't make it private. Can always shift it over.
+JIAF analysis to support the development of JIAF 2.0.
 
 ## Data
 
