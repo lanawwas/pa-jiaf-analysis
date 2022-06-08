@@ -314,7 +314,7 @@ ggsave(
     "2022_hno_max_test_absolute.png"
   ),
   height = 6.5,
-  width = 6.5
+  width = 10
 )
 
 # difference between highest and lowest aggregation, as a percent
@@ -402,7 +402,7 @@ ggsave(
     "2022_hno_max_test_percent_change.png"
   ),
   height = 6.5,
-  width = 6.5
+  width = 11
 )
 
 
@@ -488,7 +488,7 @@ ggsave(
     "2022_hno_max_test_pct.png"
   ),
   height = 6,
-  width = 5
+  width = 7
 )
 
 # max agg PiN with HRP

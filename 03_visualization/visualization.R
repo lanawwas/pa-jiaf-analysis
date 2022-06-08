@@ -1,4 +1,3 @@
-library(ggplot2)
 library(scales)
 library(tidyverse)
 
@@ -178,6 +177,6 @@ ggsave(
     "sectoral_pins",
     "2022_hno_pct_difference.png"
   ),
-  width = 5,
+  width = 6,
   height = 5
 )

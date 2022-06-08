@@ -27,7 +27,7 @@ ggplot(
   )
 ) +
   geom_col(
-    fill = "#888888"
+    fill = "#1EBFB3"
   ) +
   coord_flip() +
   labs(
