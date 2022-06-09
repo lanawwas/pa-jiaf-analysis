@@ -34,7 +34,12 @@ df_sectors <- read_csv(
   ) %>%
   summarize(
     pin = sum(pin, na.rm = TRUE),
-    affected_population = sum(affected_population, na.rm = TRUE)
+    affected_population = sum(affected_population, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  group_by(
+    adm0_pcode,
+    adm_name
   ) %>%
   mutate(
     affected_population = max(round(affected_population))
@@ -98,15 +103,13 @@ df_max_sectors <- df_sectors %>%
     .drop = TRUE
   ) %>%
   slice_max(order_by = pin, n = 2, with_ties = FALSE) %>%
-  transmute(
-    adm0_pcode,
-    adm_name,
-    affected_population,
+  mutate(
     max_pin = pin[1],
     max_sector = sector[1],
     second_max_pin = pin[2],
     second_max_sector = sector[2]
   ) %>%
+  select(-c(sector, pin)) %>%
   unique()
 
 df_msna_anlyse <- df_msna %>%
