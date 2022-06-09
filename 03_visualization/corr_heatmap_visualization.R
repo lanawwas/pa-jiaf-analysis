@@ -67,6 +67,16 @@ ggsave(
   width = 5, height = 5
 )
 
+write_csv(
+  df_pins %>% filter(sector_group == "sectoral"),
+  file.path(
+    file_paths$output_dir,
+    "graphs",
+    "pin_totals",
+    "datasets",
+    "2022_hno_pin_totals.csv"
+  )
+)
 
 ######################
 #### CORRELATIONS ####
@@ -83,6 +93,9 @@ df_corr <- read_csv(
 
 # First plot the correlations for the full data sample
 df_corr_all <- df_corr %>%
+  filter(
+    sector != "Displaced pop."
+  ) %>%
   pivot_wider(
     names_from = sector,
     values_from = pin,
@@ -100,7 +113,38 @@ cluster_corr_all <- cor(
   ggcorrplot(
     type = "lower",
     lab = TRUE,
-    lab_size = 2
+    lab_size = 2,
+    colors = c("#F2645A", "white", "#1EBFB3"),
+    title = "Sector correlations, disaggregated PiN"
+  ) +
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 16,
+      margin = margin(10, 10, 10, 10, "pt"),
+      family = "Roboto",
+      hjust = 1
+    ),
+    plot.background = element_rect(
+      fill = "white"
+    ),
+    axis.text = element_text(
+      face = "bold",
+      size = 10,
+      family = "Roboto"
+    ),
+    legend.text = element_text(
+      size = 8,
+      family = "Roboto"
+    ),
+    legend.position = "bottom",
+    panel.grid.minor = element_blank(),
+    legend.background = element_rect(fill = "transparent"),
+    legend.box.background = element_rect(fill = "transparent"),
+    strip.text = element_text(
+      size = 16,
+      family = "Roboto"
+    )
   )
 
 ggsave(
@@ -110,9 +154,23 @@ ggsave(
     "correlation",
     "2022_hno_pin_cluster_corr_all.png"
   ),
-  width = 5,
-  height = 5,
+  width = 6,
+  height = 6,
   plot = cluster_corr_all
+)
+
+write.csv(
+  cor(as.matrix(df_corr_all),
+    use = "pairwise.complete.obs"
+  ),
+  file.path(
+    file_paths$output_dir,
+    "graphs",
+    "correlation",
+    "datasets",
+    "2022_hno_pin_cluster_corr_all.csv"
+  ),
+  row.names = TRUE
 )
 
 cluster_corr_all_pairs <- ggpairs(df_corr_all)
@@ -161,6 +219,20 @@ ggsave(
   plot = cluster_corr_all_log
 )
 
+write.csv(
+  cor(as.matrix(df_corr_all_log),
+    use = "pairwise.complete.obs"
+  ),
+  file.path(
+    file_paths$output_dir,
+    "graphs",
+    "correlation",
+    "datasets",
+    "2022_hno_pin_cluster_corr_all_log.csv"
+  ),
+  row.names = TRUE
+)
+
 cluster_corr_all_pairs_log <- ggpairs(df_corr_all_log)
 
 ggsave(
@@ -202,8 +274,40 @@ cluster_corr_countries <- cor(
   ggcorrplot(
     type = "lower",
     lab = TRUE,
-    lab_size = 2
+    lab_size = 2,
+    colors = c("#F2645A", "white", "#1EBFB3"),
+    title = "Sector correlations, country summed PiN"
+  ) +
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 16,
+      margin = margin(10, 10, 10, 10, "pt"),
+      family = "Roboto",
+      hjust = 1
+    ),
+    plot.background = element_rect(
+      fill = "white"
+    ),
+    axis.text = element_text(
+      face = "bold",
+      size = 10,
+      family = "Roboto"
+    ),
+    legend.text = element_text(
+      size = 8,
+      family = "Roboto"
+    ),
+    legend.position = "bottom",
+    panel.grid.minor = element_blank(),
+    legend.background = element_rect(fill = "transparent"),
+    legend.box.background = element_rect(fill = "transparent"),
+    strip.text = element_text(
+      size = 16,
+      family = "Roboto"
+    )
   )
+
 
 ggsave(
   file.path(
@@ -212,11 +316,25 @@ ggsave(
     "correlation",
     "2022_hno_pin_cluster_corr_countries.png"
   ),
-  width = 5,
-  height = 5,
+  width = 6,
+  height = 6,
   plot = cluster_corr_countries
 )
 
+write.csv(
+  cor(
+    as.matrix(df_corr_countries),
+    use = "pairwise.complete.obs"
+  ),
+  file.path(
+    file_paths$output_dir,
+    "graphs",
+    "correlation",
+    "datasets",
+    "2022_hno_pin_cluster_corr_countries.csv"
+  ),
+  row.names = TRUE
+)
 # ggpairs doens't work because it uses cor.test which can't do
 # pairwise, I've checked the significance with psych::corr and some
 # are significant, some not. Have trouble plotting it though because
@@ -318,7 +436,7 @@ fig_pin_all <- df_violin %>%
     y = "",
     title = "Sectoral PiN as % of JIAF 1.1 intersectoral PiN",
     subtitle = paste0(
-      "Minimum to maximum percent across ",
+      "Minimum to maximum % across ",
       "n countries (specified to the right)"
     )
   ) +
@@ -355,10 +473,21 @@ ggsave(
   file.path(
     file_paths$output_dir,
     "graphs",
-    "sectoral_pins",
+    "pin_totals",
     "2022_hno_pin_percent_all.png"
   ),
   width = 10, height = 7, plot = fig_pin_all
+)
+
+write_csv(
+  df_violin,
+  file.path(
+    file_paths$output_dir,
+    "graphs",
+    "pin_totals",
+    "datasets",
+    "2022_hno_pin_percent_all.csv"
+  )
 )
 
 # heat map version
@@ -369,7 +498,9 @@ fig_heatmap <- df_sectoral %>%
   ) %>%
   mutate(
     sector = factor(sector, levels = levels(df_violin$sector))
-  ) %>%
+  )
+
+fig_heatmap %>%
   ggplot() +
   geom_tile(
     aes(
@@ -420,10 +551,20 @@ ggsave(
   file.path(
     file_paths$output_dir,
     "graphs",
-    "sectoral_pins",
+    "pin_totals",
     "2022_hno_pin_percent_countries.png"
   ),
   width = 10,
-  height = 7,
-  plot = fig_heatmap
+  height = 7
+)
+
+write_csv(
+  fig_heatmap,
+  file.path(
+    file_paths$output_dir,
+    "graphs",
+    "pin_totals",
+    "datasets",
+    "2022_hno_pin_percent_countries.csv"
+  )
 )
