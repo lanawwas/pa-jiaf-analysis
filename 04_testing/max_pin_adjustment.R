@@ -14,11 +14,11 @@ df_sectors <- read_csv(
     "2022_hno_pin_cluster_totals.csv"
   )
 ) %>%
-  mutate_at(
-    .vars = vars(matches("adm[1-3]")),
-    .funs = tolower
-  ) %>%
   mutate(
+    across(
+      .cols = matches("adm[1-3]"),
+      .fns = tolower
+    ),
     adm_name = case_when(
       adm0_pcode == "COL" ~ adm1_name,
       !is.na(adm3_name) ~ adm3_name,
@@ -35,32 +35,39 @@ df_sectors <- read_csv(
   summarize(
     pin = sum(pin, na.rm = TRUE),
     affected_population = sum(affected_population, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  group_by(
-    adm0_pcode,
-    adm_name
+    .groups = "drop_last"
   ) %>%
   mutate(
     affected_population = max(round(affected_population))
-  )
+  ) %>%
+  ungroup()
 
-df_msna <- read.csv(file.path("../MSNA_data.csv")) %>%
-  mutate_at(
-    .vars = vars(protection_lsg:livelihoods_lsg),
-    ~ case_when(
-      . == "4+" ~ 5,
-      is.na(.) ~ NA_real_,
-      TRUE ~ as.numeric(.)
+df_msna <- read_csv(
+  file.path(
+    dirname(getwd()),
+    "MSNA_data.csv"
+  )
+) %>%
+  mutate(
+    across(
+      .cols = protection_lsg:livelihoods_lsg,
+      .fns = ~ case_when(
+        . == "4+" ~ 5,
+        is.na(.) ~ NA_real_,
+        TRUE ~ as.numeric(.)
+      )
+    ),
+    across(
+      .cols = matches("admin[1-3]"),
+      .fns = ~ gsub(
+        "[ ]|[-]|[.]|[_]|[,]",
+        "",
+        tolower(stringi::stri_trans_general(.x, "latin-ascii"))
+      )
     )
   ) %>%
-  mutate(
-    admin1 = gsub("[ ]|[-]|[.]|[_]|[,]", "", tolower(admin1)),
-    admin2_hno = gsub("[ ]|[-]|[.]|[_]|[,]", "", tolower(admin2_hno)),
-    admin3_hno = gsub("[ ]|[-]|[.]|[_]|[,]", "", tolower(admin3_hno))
-  ) %>%
   pivot_longer(
-    cols = matches("_lsg"),
+    cols = ends_with("_lsg"),
     names_to = "sector",
     values_to = "severity"
   ) %>%
@@ -188,7 +195,8 @@ df_msna_anlyse %>%
     max_pin = sum(round(max_pin)),
     pin_adj_all_other = sum(round(pin_adj_all_other)),
     pin_adj_second_max = sum(round(pin_adj_second_max)),
-    affected_population = sum(round(affected_population))
+    affected_population = sum(round(affected_population)),
+    .groups = "drop"
   ) %>%
   pivot_longer(
     cols = -adm0_pcode,
@@ -197,17 +205,17 @@ df_msna_anlyse %>%
   mutate(
     pin_type = case_when(
       pin_type == "affected_population" ~ "Targeted population",
-      pin_type == "max_pin" ~ paste0(
+      pin_type == "max_pin" ~ paste(
         "Max sectoral PiN",
-        "(disaggregated only at admin level)"
+        "(no adjustment)"
       ),
-      pin_type == "pin_adj_all_other" ~ paste0(
+      pin_type == "pin_adj_all_other" ~ paste(
         "Max sectoral PiN",
-        "(adjusted by non overlap needs with all other sectors)"
+        "(adjusted by non-overlapping needs with all other sectors)"
       ),
-      pin_type == "pin_adj_second_max" ~ paste0(
+      pin_type == "pin_adj_second_max" ~ paste(
         "Max sectoral PiN",
-        "(adjusted by non overlap needs with second max sector)"
+        "(adjusted by non-overlapping needs with second max sector)"
       )
     ),
     value = round(value / 1000000, 2)
@@ -222,7 +230,9 @@ df_msna_anlyse %>%
     strip.position = "bottom",
     scales = "free_x"
   ) +
-  geom_col() +
+  geom_col(
+    fill = "#1EBFB3"
+  ) +
   geom_text(
     position = position_identity(),
     hjust = -.2,
@@ -231,13 +241,12 @@ df_msna_anlyse %>%
   coord_flip() +
   labs(
     x = "",
-    y = "PIN",
+    y = "PiN",
     title = paste0(
-      "Option 3: Comparison of HH severity aggregation, indicator PiN, ",
-      "and sectoral PiN"
+      "Impact of accounting for overlap on sectoral PiN"
     )
   ) +
-  theme_light() +
+  theme_minimal() +
   scale_y_continuous(
     labels = function(x) {
       paste0(x, "M")
@@ -253,8 +262,11 @@ df_msna_anlyse %>%
     plot.title = element_text(
       face = "bold",
       size = 22,
-      margin = margin(10, 10, 30, 10, "pt"),
+      margin = margin(10, 10, 10, 10, "pt"),
       family = "Roboto"
+    ),
+    plot.background = element_rect(
+      fill = "white"
     ),
     axis.text = element_text(
       face = "bold",
@@ -266,9 +278,7 @@ df_msna_anlyse %>%
       family = "Roboto"
     ),
     legend.position = "bottom",
-    panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    panel.background = element_rect(fill = "transparent"),
     legend.background = element_rect(fill = "transparent"),
     legend.box.background = element_rect(fill = "transparent"),
     strip.text = element_text(
@@ -281,17 +291,19 @@ ggsave(
   file.path(
     file_paths$output_dir,
     "graphs",
+    "Option 1",
     "2022_max_pin_adj_by_msna.png"
   ),
-  bg = "transparent",
-  height = 13,
-  width = 25
+  height = 8,
+  width = 12
 )
 
 write_csv(
   df_msna_anlyse,
   file.path(
     file_paths$output_dir,
+    "graphs",
+    "Option 1",
     "datasets",
     "2022_max_pin_adj_by_msna.csv"
   )
