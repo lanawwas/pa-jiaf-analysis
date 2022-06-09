@@ -42,6 +42,19 @@ df_sectors <- read_csv(
   ) %>%
   ungroup()
 
+abc <- df_sectors %>%
+  group_by(
+    adm0_pcode,
+    adm_name
+  ) %>%
+  summarise(
+    affected_population = max(affected_population, na.rm = TRUE),
+    .groups = "drop_last"
+  ) %>%
+  summarise(
+    sum(affected_population)
+  )
+
 df_msna <- read_csv(
   file.path(
     dirname(getwd()),
@@ -79,6 +92,7 @@ df_msna <- read_csv(
     uuid,
     adm0_pcode = admin0,
     adm_name = case_when(
+      adm0_pcode == "COL" ~ admin1,
       !is.na(admin3_hno) ~ admin3_hno,
       admin2_hno == "baidoa" ~ "baydhaba",
       !is.na(admin2_hno) ~ admin2_hno,
@@ -120,7 +134,7 @@ df_max_sectors <- df_sectors %>%
   unique()
 
 df_msna_anlyse <- df_msna %>%
-  left_join(
+  full_join(
     df_max_sectors,
     by = c("adm0_pcode", "adm_name")
   ) %>%
@@ -145,9 +159,9 @@ df_msna_anlyse <- df_msna %>%
     weight
   ) %>%
   summarize(
-    inneed_max = sum(inneed_max),
-    inneed_second_max = sum(inneed_second_max),
-    inneed_other = sum(inneed_other),
+    inneed_max = sum(inneed_max, na.rm = TRUE),
+    inneed_second_max = sum(inneed_second_max, na.rm = TRUE),
+    inneed_other = sum(inneed_other, na.rm = TRUE),
     .groups = "drop"
   ) %>%
   mutate(
@@ -173,6 +187,9 @@ df_msna_anlyse <- df_msna %>%
     .groups = "drop"
   ) %>%
   mutate(
+    perc_second_max_nonoverlap = replace_na(perc_second_max_nonoverlap, 0),
+    perc_all_other_sectors_nonoverlap =
+      replace_na(perc_all_other_sectors_nonoverlap, 0),
     pin_adj_second_max = max_pin +
       (affected_population * perc_second_max_nonoverlap),
     pin_adj_second_max = ifelse(
