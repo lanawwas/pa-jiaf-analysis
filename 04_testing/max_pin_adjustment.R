@@ -42,19 +42,6 @@ df_sectors <- read_csv(
   ) %>%
   ungroup()
 
-abc <- df_sectors %>%
-  group_by(
-    adm0_pcode,
-    adm_name
-  ) %>%
-  summarise(
-    affected_population = max(affected_population, na.rm = TRUE),
-    .groups = "drop_last"
-  ) %>%
-  summarise(
-    sum(affected_population)
-  )
-
 df_msna <- read_csv(
   file.path(
     dirname(getwd()),
@@ -115,37 +102,72 @@ df_msna <- read_csv(
 ### Analyse datasets ###
 ########################
 
+msna_sectors <- unique(df_msna$sector)
+
 df_max_sectors <- df_sectors %>%
   filter(adm0_pcode %in% unique(df_msna$adm0_pcode)) %>%
-  group_by(
-    adm0_pcode,
+  group_by(adm0_pcode,
     adm_name,
     affected_population,
     .drop = TRUE
   ) %>%
-  slice_max(order_by = pin, n = 2, with_ties = FALSE) %>%
+  slice_max(
+    order_by = pin,
+    n = 2,
+    with_ties = FALSE
+  ) %>%
   mutate(
     max_pin = pin[1],
     max_sector = sector[1],
-    second_max_pin = pin[2],
-    second_max_sector = sector[2]
+    max_2_pin = pin[2],
+    max_2_sector = sector[2]
   ) %>%
   select(-c(sector, pin)) %>%
-  unique()
+  unique() %>%
+  mutate(
+    max_sector = ifelse(grepl("Protection", max_sector),
+      "Protection",
+      max_sector
+    ),
+    max_2_sector = ifelse(grepl("Protection", max_2_sector),
+      "Protection",
+      max_2_sector
+    ),
+  )
 
 df_msna_anlyse <- df_msna %>%
-  full_join(
-    df_max_sectors,
+  full_join(df_max_sectors,
     by = c("adm0_pcode", "adm_name")
   ) %>%
   filter(!is.na(affected_population)) %>%
   mutate(
-    inneed_max = ifelse(sector == max_sector &
+    pin_max = ifelse(sector == max_sector &
       inneed == 1, 1, 0),
-    inneed_second_max = ifelse(sector == second_max_sector &
-      inneed == 1, 1, 0),
-    inneed_other = ifelse(sector != max_sector &
-      inneed == 1, 1, 0)
+    pin_max_2_sect_match = ifelse(
+      max_sector %in% msna_sectors &
+        sector == max_2_sector &
+        inneed == 1,
+      1,
+      0
+    ),
+    pin_other_sect_match = ifelse(
+      max_sector %in% msna_sectors &
+        sector != max_sector &
+        inneed == 1,
+      1,
+      0
+    ),
+    pin_max_2_sect_nomatch = ifelse(sector == max_2_sector &
+      inneed == 1,
+    1,
+    0
+    ),
+    pin_other_sect_nomatch = ifelse(sector != max_sector &
+      inneed == 1,
+    1,
+    0
+    ),
+    area_not_covered_msna = ifelse(is.na(uuid), 1, 0)
   ) %>%
   group_by(
     uuid,
@@ -153,22 +175,37 @@ df_msna_anlyse <- df_msna %>%
     adm_name,
     max_sector,
     max_pin,
-    second_max_sector,
-    second_max_pin,
+    max_2_sector,
+    max_2_pin,
     affected_population,
     weight
   ) %>%
   summarize(
-    inneed_max = sum(inneed_max, na.rm = TRUE),
-    inneed_second_max = sum(inneed_second_max, na.rm = TRUE),
-    inneed_other = sum(inneed_other, na.rm = TRUE),
+    pin_max = sum(pin_max, na.rm = TRUE),
+    pin_max_2_sect_match = sum(pin_max_2_sect_match, na.rm = TRUE),
+    pin_other_sect_match = sum(pin_other_sect_match, na.rm = TRUE),
+    pin_max_2_sect_nomatch = sum(pin_max_2_sect_nomatch, na.rm = TRUE),
+    pin_other_sect_nomatch = sum(pin_other_sect_nomatch, na.rm = TRUE),
+    area_not_covered_msna = sum(area_not_covered_msna),
     .groups = "drop"
   ) %>%
   mutate(
-    inneed_second_max = ifelse(inneed_max > 0, 0, inneed_second_max),
-    inneed_other = case_when(
-      inneed_max > 0 ~ 0,
-      inneed_other > 0 ~ 1,
+    pin_max_2_sect_match = ifelse(pin_max > 0,
+      0,
+      pin_max_2_sect_match
+    ),
+    pin_max_2_sect_nomatch = ifelse(pin_max > 0,
+      0,
+      pin_max_2_sect_nomatch
+    ),
+    pin_other_sect_match = case_when(
+      pin_max > 0 ~ 0,
+      pin_other_sect_match > 0 ~ 1,
+      TRUE ~ 0
+    ),
+    pin_other_sect_nomatch = case_when(
+      pin_max > 0 ~ 0,
+      pin_other_sect_nomatch > 0 ~ 1,
       TRUE ~ 0
     )
   ) %>%
@@ -177,44 +214,96 @@ df_msna_anlyse <- df_msna %>%
     adm_name,
     max_sector,
     max_pin,
-    second_max_sector,
-    second_max_pin,
+    max_2_sector,
+    max_2_pin,
     affected_population
   ) %>%
   summarize(
-    perc_second_max_nonoverlap = weighted.mean(inneed_second_max, weight),
-    perc_all_other_sectors_nonoverlap = weighted.mean(inneed_other, weight),
+    perc_2nd_max_disjoint_match =
+      weighted.mean(pin_max_2_sect_match, weight),
+    perc_2nd_max_disjoint_nomatch =
+      weighted.mean(pin_max_2_sect_nomatch, weight),
+    perc_other_sectors_disjoint_match =
+      weighted.mean(pin_other_sect_match, weight),
+    perc_other_sectors_disjoint_nomatch =
+      weighted.mean(pin_other_sect_nomatch, weight),
+    area_not_covered_msna = sum(area_not_covered_msna),
     .groups = "drop"
   ) %>%
   mutate(
-    perc_second_max_nonoverlap = replace_na(perc_second_max_nonoverlap, 0),
-    perc_all_other_sectors_nonoverlap =
-      replace_na(perc_all_other_sectors_nonoverlap, 0),
-    pin_adj_second_max = max_pin +
-      (affected_population * perc_second_max_nonoverlap),
-    pin_adj_second_max = ifelse(
-      pin_adj_second_max > affected_population,
-      affected_population,
-      pin_adj_second_max
+    perc_2nd_max_disjoint_match = replace_na(perc_2nd_max_disjoint_match, 0),
+    perc_2nd_max_disjoint_nomatch = replace_na(
+      perc_2nd_max_disjoint_nomatch,
+      0
     ),
-    pin_adj_all_other = max_pin +
-      (affected_population * perc_all_other_sectors_nonoverlap),
-    pin_adj_all_other = ifelse(
-      pin_adj_all_other > affected_population,
+    perc_other_sectors_disjoint_match =
+      replace_na(perc_other_sectors_disjoint_match, 0),
+    perc_other_sectors_disjoint_nomatch =
+      replace_na(perc_other_sectors_disjoint_nomatch, 0),
+    pin_adj_max_2_match = max_pin +
+      (affected_population * perc_2nd_max_disjoint_match),
+    pin_max_2_match_exceed = ifelse(
+      pin_adj_max_2_match > affected_population, 1, 0
+    ),
+    pin_adj_max_2_match = ifelse(
+      pin_adj_max_2_match > affected_population,
       affected_population,
-      pin_adj_all_other
+      pin_adj_max_2_match
+    ),
+    pin_adj_max_2_nomatch = max_pin +
+      (affected_population * perc_2nd_max_disjoint_nomatch),
+    pin_max_2_nomatch_exceed = ifelse(
+      pin_adj_max_2_nomatch > affected_population, 1, 0
+    ),
+    pin_adj_max_2_nomatch = ifelse(
+      pin_adj_max_2_nomatch > affected_population,
+      affected_population,
+      pin_adj_max_2_nomatch
+    ),
+    pin_adj_all_other_match = max_pin +
+      (affected_population * perc_other_sectors_disjoint_match),
+    pin_other_match_exceed = ifelse(
+      pin_adj_all_other_match > affected_population, 1, 0
+    ),
+    pin_adj_all_other_match = ifelse(
+      pin_adj_all_other_match > affected_population,
+      affected_population,
+      pin_adj_all_other_match
+    ),
+    pin_adj_all_other_nomatch = max_pin +
+      (affected_population * perc_other_sectors_disjoint_nomatch),
+    pin_other_nomatch_exceed = ifelse(
+      pin_adj_all_other_nomatch > affected_population, 1, 0
+    ),
+    pin_adj_all_other_nomatch = ifelse(
+      pin_adj_all_other_nomatch > affected_population,
+      affected_population,
+      pin_adj_all_other_nomatch
     )
   )
 
-df_msna_anlyse %>%
+write_csv(
+  temp,
+  file.path(
+    file_paths$output_dir,
+    "graphs",
+    "Option 1",
+    "datasets",
+    "2022_max_pin_adj_by_msna.csv"
+  )
+)
+
+temp <- df_msna_anlyse %>%
   group_by(adm0_pcode) %>%
   summarise(
     max_pin = sum(round(max_pin)),
-    pin_adj_all_other = sum(round(pin_adj_all_other)),
-    pin_adj_second_max = sum(round(pin_adj_second_max)),
+    pin_adj_max_2_match = sum(round(pin_adj_max_2_match)),
+    pin_adj_all_other_match = sum(round(pin_adj_all_other_match)),
     affected_population = sum(round(affected_population)),
     .groups = "drop"
-  ) %>%
+  )
+
+temp %>%
   pivot_longer(
     cols = -adm0_pcode,
     names_to = "pin_type"
@@ -226,11 +315,11 @@ df_msna_anlyse %>%
         "Max sectoral PiN",
         "(no adjustment)"
       ),
-      pin_type == "pin_adj_all_other" ~ paste(
+      pin_type == "pin_adj_all_other_match" ~ paste(
         "Max sectoral PiN",
         "(adjusted by non-overlapping needs with all other sectors)"
       ),
-      pin_type == "pin_adj_second_max" ~ paste(
+      pin_type == "pin_adj_max_2_match" ~ paste(
         "Max sectoral PiN",
         "(adjusted by non-overlapping needs with second max sector)"
       )
@@ -261,6 +350,10 @@ df_msna_anlyse %>%
     y = "PiN",
     title = paste0(
       "Impact of accounting for overlap on sectoral PiN"
+    ),
+    subtitle = paste0(
+      "only adjusting areas where the max sectoral PiN was ",
+      "available in the MSNA, to acccount for the non-overlap"
     )
   ) +
   theme_minimal() +
@@ -309,14 +402,14 @@ ggsave(
     file_paths$output_dir,
     "graphs",
     "Option 1",
-    "2022_max_pin_adj_by_msna.png"
+    "2022_max_pin_adj_by_msna_match.png"
   ),
   height = 8,
   width = 12
 )
 
 write_csv(
-  df_msna_anlyse,
+  temp,
   file.path(
     file_paths$output_dir,
     "graphs",
@@ -324,4 +417,267 @@ write_csv(
     "datasets",
     "2022_max_pin_adj_by_msna.csv"
   )
+)
+
+# adjusted PiN not accounting for max secor avialability in the MSNA
+temp <- df_msna_anlyse %>%
+  group_by(adm0_pcode) %>%
+  summarise(
+    max_pin = sum(round(max_pin)),
+    pin_adj_max_2_nomatch = sum(round(pin_adj_max_2_nomatch)),
+    pin_adj_all_other_nomatch = sum(round(pin_adj_all_other_nomatch)),
+    affected_population = sum(round(affected_population)),
+    .groups = "drop"
+  )
+
+temp %>%
+  pivot_longer(
+    cols = -adm0_pcode,
+    names_to = "pin_type"
+  ) %>%
+  mutate(
+    pin_type = case_when(
+      pin_type == "affected_population" ~ "Targeted population",
+      pin_type == "max_pin" ~ paste(
+        "Max sectoral PiN",
+        "(no adjustment)"
+      ),
+      pin_type == "pin_adj_all_other_nomatch" ~ paste(
+        "Max sectoral PiN",
+        "(adjusted by non-overlapping needs with all other sectors)"
+      ),
+      pin_type == "pin_adj_max_2_nomatch" ~ paste(
+        "Max sectoral PiN",
+        "(adjusted by non-overlapping needs with second max sector)"
+      )
+    ),
+    value = round(value / 1000000, 2)
+  ) %>%
+  arrange(adm0_pcode, desc(value)) %>%
+  ggplot(aes(
+    y = value,
+    x = reorder(pin_type, +value),
+    label = paste0(value, "M")
+  )) +
+  facet_wrap(~adm0_pcode,
+    strip.position = "bottom",
+    scales = "free_x"
+  ) +
+  geom_col(
+    fill = "#1EBFB3"
+  ) +
+  geom_text(
+    position = position_identity(),
+    hjust = -.2,
+    size = 4
+  ) +
+  coord_flip() +
+  labs(
+    x = "",
+    y = "PiN",
+    title = paste0(
+      "Impact of accounting for overlap on sectoral PiN"
+    ),
+    subtitle = paste0(
+      "adjusting the non-overlapping needs regardless of the ",
+      "availability of the sector"
+    )
+  ) +
+  theme_minimal() +
+  scale_y_continuous(
+    labels = function(x) {
+      paste0(x, "M")
+    },
+    expand = expansion(c(0, .2))
+  ) +
+  scale_x_discrete(
+    labels = function(x) {
+      str_wrap(x, width = 35)
+    }
+  ) +
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 22,
+      margin = margin(10, 10, 10, 10, "pt"),
+      family = "Roboto"
+    ),
+    plot.background = element_rect(
+      fill = "white"
+    ),
+    axis.text = element_text(
+      face = "bold",
+      size = 10,
+      family = "Roboto"
+    ),
+    legend.text = element_text(
+      size = 12,
+      family = "Roboto"
+    ),
+    legend.position = "bottom",
+    panel.grid.minor = element_blank(),
+    legend.background = element_rect(fill = "transparent"),
+    legend.box.background = element_rect(fill = "transparent"),
+    strip.text = element_text(
+      size = 16,
+      family = "Roboto"
+    )
+  )
+
+ggsave(
+  file.path(
+    file_paths$output_dir,
+    "graphs",
+    "Option 1",
+    "2022_max_pin_adj_by_msna_nomatch.png"
+  ),
+  height = 8,
+  width = 12
+)
+
+write_csv(
+  temp,
+  file.path(
+    file_paths$output_dir,
+    "graphs",
+    "Option 1",
+    "datasets",
+    "2022_max_pin_adj_by_msna_nomatch.csv"
+  )
+)
+
+# % of areas max PiN types don't match with MSNA
+temp <- df_max_sectors %>%
+  mutate(
+    non_matching_sector = ifelse(max_sector %in% msna_sectors, 0, 1)
+  ) %>%
+  group_by(
+    adm0_pcode
+  ) %>%
+  summarize(
+    perc_non_matching = sum(non_matching_sector) / n()
+  ) %>%
+  left_join(
+    df_msna_anlyse %>%
+      group_by(
+        adm0_pcode
+      ) %>%
+      summarize(
+        perc_max_2_match_exceed = sum(pin_max_2_match_exceed) / n(),
+        perc_max_2_nomatch_exceed = sum(pin_max_2_nomatch_exceed) / n(),
+        perc_other_match_exceed = sum(pin_other_match_exceed) / n(),
+        perc_other_nomatch_exceed = sum(pin_other_nomatch_exceed) / n(),
+        perc_area_not_covered_msna = sum(area_not_covered_msna) / n()
+      )
+  )
+
+temp %>%
+  pivot_longer(
+    cols = -adm0_pcode
+  ) %>%
+  mutate(
+    name = case_when(
+      name == "perc_non_matching" ~ "Sectors not matching with MSNA",
+      name == "perc_max_2_match_exceed" ~ paste0(
+        "PiN adjustment from the second highest sector exceeded the ",
+        "affected population (max sector was available the MSNA)"
+      ),
+      name == "perc_max_2_nomatch_exceed" ~ paste0(
+        "PiN adjustment from the second highest sector exceeded the ",
+        "affected population (max sector was not available the MSNA)"
+      ),
+      name == "perc_other_match_exceed" ~ paste0(
+        "PiN adjustment from any sector exceeded the affected population ",
+        "(max sector was available the MSNA)"
+      ),
+      name == "perc_other_nomatch_exceed" ~ paste0(
+        "PiN adjustment from any sector exceeded the affected population ",
+        "(max sector was not available the MSNA)"
+      ),
+      name == "perc_area_not_covered_msna" ~ "MSNA data is not available"
+    ),
+    value = round(value * 100)
+  ) %>% # nolint
+  arrange(adm0_pcode, desc(value)) %>%
+  ggplot(
+    aes(
+      y = value,
+      x = reorder(name, +value),
+      label = paste0(value, "%")
+    )
+  ) +
+  scale_fill_distiller(type = "seq", direction = 1) +
+  geom_bar(
+    stat = "identity",
+    fill = "#1EBFB3"
+  ) +
+  facet_grid(cols = vars(adm0_pcode)) +
+  coord_flip() +
+  theme_minimal() +
+  geom_text(
+    position = position_identity(),
+    hjust = -.1,
+    size = 4
+  ) +
+  scale_y_continuous(
+    limits = c(0, 100),
+    labels = function(x) {
+      paste0(x, "%")
+    }
+  ) +
+  labs(
+    y = "% of areas affected",
+    x = "",
+    title = paste0(
+      "% of areas being affected by types of sectoral ",
+      "PiN misalignment with the MSNA"
+    )
+  ) +
+  scale_x_discrete(
+    labels = function(x) {
+      str_wrap(x, width = 35)
+    }
+  ) +
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 22,
+      margin = margin(10, 10, 10, 10, "pt"),
+      hjust = 0.5,
+      family = "Roboto"
+    ),
+    plot.background = element_rect(
+      fill = "white"
+    ),
+    panel.border = element_rect(
+      size = 0.8,
+      fill = "transparent",
+      color = "gray"
+    ),
+    axis.text = element_text(
+      face = "bold",
+      size = 10,
+      family = "Roboto"
+    ),
+    axis.title.x = element_text(
+      face = "bold",
+      size = 12,
+      margin = margin(20, 10, 10, 10, "pt"),
+      family = "Roboto"
+    ),
+    strip.text = element_text(
+      size = 16,
+      family = "Roboto"
+    )
+  )
+
+ggsave(
+  file.path(
+    file_paths$output_dir,
+    "graphs",
+    "Option 1",
+    "2022_msna_misalignments.png"
+  ),
+  height = 8,
+  width = 22
 )
