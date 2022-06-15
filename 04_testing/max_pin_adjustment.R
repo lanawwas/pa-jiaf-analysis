@@ -341,15 +341,14 @@ temp %>%
   ggplot(aes(
     y = value,
     x = reorder(pin_type, +value),
-    label = paste0(value, "M")
+    label = paste0(value, "M"),
+    fill = pin_type
   )) +
   facet_wrap(~adm0_pcode,
     strip.position = "bottom",
     scales = "free_x"
   ) +
-  geom_col(
-    fill = "#1EBFB3"
-  ) +
+  geom_col() +
   geom_text(
     position = position_identity(),
     hjust = -.2,
@@ -374,6 +373,9 @@ temp %>%
     },
     expand = expansion(c(0, .2))
   ) +
+  scale_fill_manual(
+    values = c(rep("#1EBFB3", 3), "black")
+  ) +
   theme(
     plot.title = element_text(
       face = "bold",
@@ -393,7 +395,7 @@ temp %>%
       size = 12,
       family = "Roboto"
     ),
-    legend.position = "bottom",
+    legend.position = "none",
     panel.grid.minor = element_blank(),
     legend.background = element_rect(fill = "transparent"),
     legend.box.background = element_rect(fill = "transparent"),
@@ -467,21 +469,23 @@ temp %>%
   ggplot(aes(
     y = value,
     x = reorder(pin_type, +value),
-    label = paste0(value, "M")
+    label = paste0(value, "M"),
+    fill = pin_type
   )) +
   facet_wrap(~adm0_pcode,
     strip.position = "bottom",
     scales = "free_x"
   ) +
-  geom_col(
-    fill = "#1EBFB3"
-  ) +
+  geom_col() +
   geom_text(
     position = position_identity(),
     hjust = -.2,
     size = 4
   ) +
   coord_flip(clip = "off") +
+  scale_fill_manual(
+    values = c(rep("#1EBFB3", 3), "black")
+  ) +
   labs(
     x = "",
     y = "PiN",
@@ -517,7 +521,7 @@ temp %>%
       size = 12,
       family = "Roboto"
     ),
-    legend.position = "bottom",
+    legend.position = "none",
     panel.grid.minor = element_blank(),
     legend.background = element_rect(fill = "transparent"),
     legend.box.background = element_rect(fill = "transparent"),
@@ -818,7 +822,7 @@ df_msna_anlyse %>%
   labs(
     x = "Max PiN, % of mean + 2 std. dev. of PiNs",
     y = "% adjustment (2nd max overlap)",
-    title = "Relationship between 2nd max PiN and overlap adjustment",
+    title = "Relationship between outliers and overlap adjustment",
     subtitle = paste0(
       "Adjusting the non-overlapping needs regardless of the ",
       "availability of the sector"
