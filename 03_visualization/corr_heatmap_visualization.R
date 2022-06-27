@@ -20,7 +20,7 @@ df_pins <- read_csv(
 )
 
 ggplot(
-  df_pins %>% filter(sector_group == "sectoral"),
+  df_pins %>% filter(sector_general == "sectoral"),
   aes(
     x = fct_reorder(adm0_pcode, pin),
     y = pin
@@ -40,8 +40,9 @@ ggplot(
   theme(
     plot.title = element_text(
       face = "bold",
-      size = 22,
+      size = 18,
       margin = margin(10, 10, 10, 10, "pt"),
+      hjust = .5,
       family = "Roboto"
     ),
     axis.text = element_text(
@@ -64,11 +65,11 @@ ggsave(
     "pin_totals",
     "2022_hno_pin_totals.png"
   ),
-  width = 5, height = 5
+  width = 10, height = 5
 )
 
 write_csv(
-  df_pins %>% filter(sector_group == "sectoral"),
+  df_pins %>% filter(sector_general == "sectoral"),
   file.path(
     file_paths$output_dir,
     "graphs",
@@ -121,7 +122,7 @@ cluster_corr_all <- cor(
     plot.title = element_text(
       face = "bold",
       size = 16,
-      margin = margin(10, 10, 10, 10, "pt"),
+      margin = margin(10, 0, 10, 0, "pt"),
       family = "Roboto",
       hjust = 1
     ),
@@ -361,7 +362,7 @@ df_sectoral <- df_corr %>%
   left_join(
     filter(
       df_pins,
-      sector_group == "intersectoral"
+      sector_general == "intersectoral"
     ) %>%
       select(
         adm0_pcode,
