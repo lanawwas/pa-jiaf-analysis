@@ -716,31 +716,67 @@ df_jiaf_is <- df %>%
     disaggregation %in% df$disaggregation[sector == "Intersectoral (raw)"])
 
 df_jiaf_is %>%
+  pivot_wider(
+    names_from = sector,
+    values_from = severity
+  ) %>%
+  group_by(
+    adm0_pcode,
+    Intersectoral,
+    `Intersectoral (raw)`
+  ) %>%
+  summarize(
+    n = n(),
+    .groups = "drop"
+  ) %>%
+  group_by(
+    adm0_pcode
+  ) %>%
+  mutate(
+    perc = n / sum(n)
+  ) %>%
+  complete(
+    adm0_pcode,
+    Intersectoral = 1:5,
+    `Intersectoral (raw)` = 1:5
+  ) %>%
+  mutate(
+    perc_lab = ifelse(
+      perc > 0,
+      paste0(round(100 * perc), "%"),
+      ""
+    )
+  ) %>%
   ggplot(
     aes(
-      x = sector,
-      fill = factor(severity)
+      x = `Intersectoral (raw)`,
+      y = Intersectoral,
+      fill = perc
     )
   ) +
-  geom_histogram(stat = "count", position = "dodge") +
-  facet_wrap(~adm0_pcode,
-    scales = "free_y"
+  geom_tile(
+    color = "#888888"
   ) +
-  scale_fill_manual(
-    values = c(
-      "#D2F2F0",
-      "#75C6C0",
-      "#56B7AF",
-      "#37A89F",
-      "#18998F"
-    )
+  geom_text(
+    aes(
+      label = perc_lab
+    ),
+    family = "Roboto"
+  ) +
+  facet_wrap(
+    ~adm0_pcode
+  ) +
+  scale_fill_gradient(
+    low = "white",
+    high = "#1EBFB3",
+    na.value = "white",
+    labels = scales::percent_format(1)
   ) +
   labs(
-    y = "Frequency of severity scores",
-    title =
-      "Comparison of JIAF1.1 and Intersectoral severity scores per country",
-    x = "",
-    fill = "Severity scores"
+    y = "Intersectoral (raw)",
+    title = "Comparison of raw and adjusted severity",
+    x = "Intersectoral (adjusted)",
+    fill = "% of areas"
   ) +
   theme_minimal() +
   theme(
@@ -775,6 +811,7 @@ df_jiaf_is %>%
       size = 12,
       family = "Roboto"
     ),
+    legend.key.width = unit(1, "cm"),
     legend.position = "bottom",
     panel.grid.minor = element_blank(),
     legend.background = element_rect(fill = "transparent"),
