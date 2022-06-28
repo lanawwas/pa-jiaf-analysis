@@ -111,7 +111,9 @@ pin_df <- max_df %>%
 # Make a file with cleaned up cluster names
 cluster_df <-
   df %>%
-  filter(!(sector %in% c("Intersectoral", "JIAF 1.1")))
+  filter(
+    !str_starts(sector, "Intersectoral")
+  )
 
 # Clean up output file for actual output
 write_csv(

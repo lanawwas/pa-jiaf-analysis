@@ -393,7 +393,7 @@ percent_overlap <- function(df, severity_cutoff = 3) {
 df_sev <- df %>%
   filter(
     !is.na(severity),
-    sector != "JIAF 1.1",
+    sector != "Intersectoral (raw)",
     severity > 0
   ) %>%
   select(
@@ -521,7 +521,7 @@ df_relation <- df %>%
       !is.na(pin) &
       severity > 0 &
       !is.na(affected_population) &
-      sector != "JIAF 1.1" &
+      sector != "Intersectoral (raw)" &
       !(adm0_pcode %in% c("BDI", "NGA", "TCD")) # they only have intersectoral
   ) %>%
   mutate(
@@ -713,7 +713,7 @@ write_csv(
 df_jiaf_is <- df %>%
   filter(sector_general == "intersectoral" &
     !is.na(severity) &
-    disaggregation %in% df$disaggregation[sector == "JIAF 1.1"])
+    disaggregation %in% df$disaggregation[sector == "Intersectoral (raw)"])
 
 df_jiaf_is %>%
   ggplot(
