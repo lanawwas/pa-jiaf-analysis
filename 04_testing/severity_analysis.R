@@ -74,7 +74,7 @@ temp %>%
   facet_wrap(~adm0_pcode, scales = "fixed") +
   labs(
     y = "% of areas",
-    title = "Distribution of # of sectors that are 3 or above by geographic area", # nolint
+    title = "Distribution of # of sectors that are 3 or above",
     x = "# of sectors with severity 3 or above"
   ) +
   scale_x_continuous(
@@ -120,8 +120,9 @@ ggsave(
     "graphs",
     "2022_number_sectors_3_above.png"
   ),
-  height = 10,
-  width = 14
+  height = 6,
+  width = 10,
+  units = "in"
 )
 
 write_csv(
@@ -216,8 +217,9 @@ ggsave(
     "graphs",
     "2022_hno_sector_severity_percent.png"
   ),
-  width = 15,
-  height = 10
+  width = 13,
+  height = 8,
+  units = "in"
 )
 
 write_csv(
@@ -368,7 +370,8 @@ percent_overlap <- function(df, severity_cutoff = 3) {
       )
     ),
     width = 14,
-    height = 11
+    height = 11,
+    units = "in"
   )
 
   write_csv(
@@ -393,7 +396,7 @@ percent_overlap <- function(df, severity_cutoff = 3) {
 df_sev <- df %>%
   filter(
     !is.na(severity),
-    sector != "JIAF 1.1",
+    sector != "Intersectoral (raw)",
     severity > 0
   ) %>%
   select(
@@ -424,6 +427,13 @@ temp <- df_sev %>%
   mutate(perc = n / sum(n))
 
 temp %>%
+  mutate(
+    sector = str_replace(
+      sector,
+      " ",
+      "\n"
+    )
+  ) %>%
   ggplot(
     aes(
       y = perc,
@@ -489,7 +499,8 @@ temp %>%
     strip.text = element_text(
       size = 11,
       family = "Roboto",
-      face = "bold"
+      face = "bold",
+      vjust = 1
     )
   )
 
@@ -499,8 +510,9 @@ ggsave(
     "graphs",
     "2022_hno_perc_sector_severities.png"
   ),
-  width = 20,
-  height = 11
+  width = 15,
+  height = 8,
+  units = "in"
 )
 
 write_csv(
@@ -521,7 +533,7 @@ df_relation <- df %>%
       !is.na(pin) &
       severity > 0 &
       !is.na(affected_population) &
-      sector != "JIAF 1.1" &
+      sector != "Intersectoral (raw)" &
       !(adm0_pcode %in% c("BDI", "NGA", "TCD")) # they only have intersectoral
   ) %>%
   mutate(
@@ -612,8 +624,9 @@ ggsave(
     "graphs",
     "2022_hno_severity_pin_distribution_country.png"
   ),
-  width = 15,
-  height = 11
+  width = 12,
+  height = 8,
+  units = "in"
 )
 
 ##################################
@@ -694,8 +707,9 @@ ggsave(
     "graphs",
     "2022_hno_severity_pin_distribution_sector.png"
   ),
-  width = 15,
-  height = 11
+  width = 12,
+  height = 8,
+  units = "in"
 )
 
 write_csv(
@@ -713,34 +727,72 @@ write_csv(
 df_jiaf_is <- df %>%
   filter(sector_general == "intersectoral" &
     !is.na(severity) &
-    disaggregation %in% df$disaggregation[sector == "JIAF 1.1"])
+    disaggregation %in% df$disaggregation[sector == "Intersectoral (raw)"])
 
-df_jiaf_is %>%
+df_is_compare <- df_jiaf_is %>%
+  pivot_wider(
+    names_from = sector,
+    values_from = severity
+  ) %>%
+  group_by(
+    adm0_pcode,
+    Intersectoral,
+    `Intersectoral (raw)`
+  ) %>%
+  summarize(
+    n = n(),
+    .groups = "drop"
+  ) %>%
+  group_by(
+    adm0_pcode
+  ) %>%
+  mutate(
+    perc = n / sum(n)
+  ) %>%
+  complete(
+    adm0_pcode,
+    Intersectoral = 1:5,
+    `Intersectoral (raw)` = 1:5
+  )
+
+df_is_compare %>%
+  mutate(
+    perc_lab = ifelse(
+      perc > 0,
+      paste0(round(100 * perc), "%"),
+      ""
+    )
+  ) %>%
   ggplot(
     aes(
-      x = sector,
-      fill = factor(severity)
+      x = `Intersectoral (raw)`,
+      y = Intersectoral,
+      fill = perc
     )
   ) +
-  geom_histogram(stat = "count", position = "dodge") +
-  facet_wrap(~adm0_pcode,
-    scales = "free_y"
+  geom_tile(
+    color = "#888888"
   ) +
-  scale_fill_manual(
-    values = c(
-      "#D2F2F0",
-      "#75C6C0",
-      "#56B7AF",
-      "#37A89F",
-      "#18998F"
-    )
+  geom_text(
+    aes(
+      label = perc_lab
+    ),
+    family = "Roboto"
+  ) +
+  facet_wrap(
+    ~adm0_pcode
+  ) +
+  scale_fill_gradient(
+    low = "white",
+    high = "#1EBFB3",
+    na.value = "white",
+    labels = scales::percent_format(1)
   ) +
   labs(
-    y = "Frequency of severity scores",
-    title =
-      "Comparison of JIAF1.1 and Intersectoral severity scores per country",
-    x = "",
-    fill = "Severity scores"
+    y = "Intersectoral (raw)",
+    title = "Comparison of raw and adjusted severity",
+    x = "Intersectoral (adjusted)",
+    fill = "% of areas"
   ) +
   theme_minimal() +
   theme(
@@ -775,6 +827,7 @@ df_jiaf_is %>%
       size = 12,
       family = "Roboto"
     ),
+    legend.key.width = unit(1, "cm"),
     legend.position = "bottom",
     panel.grid.minor = element_blank(),
     legend.background = element_rect(fill = "transparent"),
@@ -791,16 +844,123 @@ ggsave(
     "graphs",
     "2022_hno_compr_jiaf_intersectoral.png"
   ),
-  width = 15,
-  height = 11
+  width = 10,
+  height = 6,
+  units = "in"
 )
 
 write_csv(
-  df_jiaf_is,
+  df_is_compare,
   file.path(
     file_paths$output_dir_sev,
     "graphs",
     "datasets",
     "2022_hno_compr_jiaf_intersectoral.csv"
+  )
+)
+
+####################################
+#### ADJUSTMENT AND PIN PERCENT ####
+####################################
+
+df_adjust_pop <- df_jiaf_is %>%
+  pivot_wider(
+    names_from = sector,
+    values_from = severity
+  ) %>%
+  mutate(
+    pin_perc = pin / affected_population,
+    adjustment = Intersectoral - `Intersectoral (raw)`
+  ) %>%
+  filter(
+    !is.na(affected_population)
+  )
+
+df_adjust_pop %>%
+  ggplot() +
+  geom_boxplot(
+    aes(
+      group = adjustment,
+      x = adjustment,
+      y = pin_perc
+    ),
+    color = "#1EBFB3"
+  ) +
+  facet_wrap(
+    ~adm0_pcode
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 22,
+      margin = margin(10, 10, 10, 10, "pt"),
+      family = "Roboto",
+      hjust = .5
+    ),
+    plot.background = element_rect(
+      fill = "white"
+    ),
+    axis.text = element_text(
+      face = "bold",
+      size = 10,
+      family = "Roboto"
+    ),
+    axis.title.y = element_text(
+      face = "bold",
+      size = 12,
+      family = "Roboto",
+      margin = margin(r = 20)
+    ),
+    axis.title.x = element_text(
+      face = "bold",
+      size = 12,
+      family = "Roboto",
+      margin = margin(t = 20)
+    ),
+    legend.text = element_text(
+      size = 12,
+      family = "Roboto"
+    ),
+    legend.key.width = unit(1, "cm"),
+    legend.position = "bottom",
+    panel.grid.minor = element_blank(),
+    legend.background = element_rect(fill = "transparent"),
+    legend.box.background = element_rect(fill = "transparent"),
+    strip.text = element_text(
+      size = 16,
+      family = "Roboto"
+    )
+  ) +
+  scale_x_continuous(
+    breaks = c(-1, 0, 1)
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(1)
+  ) +
+  labs(
+    x = "Severity adjustment",
+    y = "PiN (% of affected population)",
+    title = "Relationship of between adjusted severity and PiN %"
+  )
+
+ggsave(
+  file.path(
+    file_paths$output_dir_sev,
+    "graphs",
+    "2022_hno_compr_adjustment_pop.png"
+  ),
+  width = 10,
+  height = 6,
+  units = "in"
+)
+
+write_csv(
+  df_adjust_pop,
+  file.path(
+    file_paths$output_dir_sev,
+    "graphs",
+    "datasets",
+    "2022_hno_compr_adjustment_pop.csv"
   )
 )
