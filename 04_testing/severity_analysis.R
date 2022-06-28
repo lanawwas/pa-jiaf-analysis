@@ -729,7 +729,7 @@ df_jiaf_is <- df %>%
     !is.na(severity) &
     disaggregation %in% df$disaggregation[sector == "Intersectoral (raw)"])
 
-df_jiaf_is %>%
+df_is_compare <- df_jiaf_is %>%
   pivot_wider(
     names_from = sector,
     values_from = severity
@@ -753,7 +753,9 @@ df_jiaf_is %>%
     adm0_pcode,
     Intersectoral = 1:5,
     `Intersectoral (raw)` = 1:5
-  ) %>%
+  )
+
+df_is_compare %>%
   mutate(
     perc_lab = ifelse(
       perc > 0,
@@ -848,7 +850,7 @@ ggsave(
 )
 
 write_csv(
-  df_jiaf_is,
+  df_is_compare,
   file.path(
     file_paths$output_dir_sev,
     "graphs",
