@@ -858,3 +858,109 @@ write_csv(
     "2022_hno_compr_jiaf_intersectoral.csv"
   )
 )
+
+####################################
+#### ADJUSTMENT AND PIN PERCENT ####
+####################################
+
+df_adjust_pop <- df_jiaf_is %>%
+  pivot_wider(
+    names_from = sector,
+    values_from = severity
+  ) %>%
+  mutate(
+    pin_perc = pin / affected_population,
+    adjustment = Intersectoral - `Intersectoral (raw)`
+  ) %>%
+  filter(
+    !is.na(affected_population)
+  )
+
+df_adjust_pop %>%
+  ggplot() +
+  geom_boxplot(
+    aes(
+      group = adjustment,
+      x = adjustment,
+      y = pin_perc
+    ),
+    color = "#1EBFB3"
+  ) +
+  facet_wrap(
+    ~adm0_pcode
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 22,
+      margin = margin(10, 10, 10, 10, "pt"),
+      family = "Roboto",
+      hjust = .5
+    ),
+    plot.background = element_rect(
+      fill = "white"
+    ),
+    axis.text = element_text(
+      face = "bold",
+      size = 10,
+      family = "Roboto"
+    ),
+    axis.title.y = element_text(
+      face = "bold",
+      size = 12,
+      family = "Roboto",
+      margin = margin(r = 20)
+    ),
+    axis.title.x = element_text(
+      face = "bold",
+      size = 12,
+      family = "Roboto",
+      margin = margin(t = 20)
+    ),
+    legend.text = element_text(
+      size = 12,
+      family = "Roboto"
+    ),
+    legend.key.width = unit(1, "cm"),
+    legend.position = "bottom",
+    panel.grid.minor = element_blank(),
+    legend.background = element_rect(fill = "transparent"),
+    legend.box.background = element_rect(fill = "transparent"),
+    strip.text = element_text(
+      size = 16,
+      family = "Roboto"
+    )
+  ) +
+  scale_x_continuous(
+    breaks = c(-1, 0, 1)
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(1)
+  ) +
+  labs(
+    x = "Severity adjustment",
+    y = "PiN (% of affected population)",
+    title = "Relationship of between adjusted severity and PiN %"
+  )
+
+ggsave(
+  file.path(
+    file_paths$output_dir_sev,
+    "graphs",
+    "2022_hno_compr_adjustment_pop.png"
+  ),
+  width = 10,
+  height = 6,
+  units = "in"
+)
+
+write_csv(
+  df_adjust_pop,
+  file.path(
+    file_paths$output_dir_sev,
+    "graphs",
+    "datasets",
+    "2022_hno_compr_adjustment_pop.csv"
+  )
+)
