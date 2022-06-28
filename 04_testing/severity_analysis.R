@@ -74,7 +74,7 @@ temp %>%
   facet_wrap(~adm0_pcode, scales = "fixed") +
   labs(
     y = "% of areas",
-    title = "Distribution of # of sectors that are 3 or above by geographic area", # nolint
+    title = "Distribution of # of sectors that are 3 or above",
     x = "# of sectors with severity 3 or above"
   ) +
   scale_x_continuous(
@@ -120,8 +120,9 @@ ggsave(
     "graphs",
     "2022_number_sectors_3_above.png"
   ),
-  height = 10,
-  width = 14
+  height = 6,
+  width = 10,
+  units = "in"
 )
 
 write_csv(
@@ -216,8 +217,9 @@ ggsave(
     "graphs",
     "2022_hno_sector_severity_percent.png"
   ),
-  width = 15,
-  height = 10
+  width = 13,
+  height = 8,
+  units = "in"
 )
 
 write_csv(
@@ -368,7 +370,8 @@ percent_overlap <- function(df, severity_cutoff = 3) {
       )
     ),
     width = 14,
-    height = 11
+    height = 11,
+    units = "in"
   )
 
   write_csv(
@@ -424,6 +427,13 @@ temp <- df_sev %>%
   mutate(perc = n / sum(n))
 
 temp %>%
+  mutate(
+    sector = str_replace(
+      sector,
+      " ",
+      "\n"
+    )
+  ) %>%
   ggplot(
     aes(
       y = perc,
@@ -489,7 +499,8 @@ temp %>%
     strip.text = element_text(
       size = 11,
       family = "Roboto",
-      face = "bold"
+      face = "bold",
+      vjust = 1
     )
   )
 
@@ -499,8 +510,9 @@ ggsave(
     "graphs",
     "2022_hno_perc_sector_severities.png"
   ),
-  width = 20,
-  height = 11
+  width = 15,
+  height = 8,
+  units = "in"
 )
 
 write_csv(
@@ -612,8 +624,9 @@ ggsave(
     "graphs",
     "2022_hno_severity_pin_distribution_country.png"
   ),
-  width = 15,
-  height = 11
+  width = 12,
+  height = 8,
+  units = "in"
 )
 
 ##################################
@@ -694,8 +707,9 @@ ggsave(
     "graphs",
     "2022_hno_severity_pin_distribution_sector.png"
   ),
-  width = 15,
-  height = 11
+  width = 12,
+  height = 8,
+  units = "in"
 )
 
 write_csv(
@@ -828,8 +842,9 @@ ggsave(
     "graphs",
     "2022_hno_compr_jiaf_intersectoral.png"
   ),
-  width = 15,
-  height = 11
+  width = 10,
+  height = 6,
+  units = "in"
 )
 
 write_csv(
