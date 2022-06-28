@@ -1,4 +1,3 @@
-library(ggplot2)
 library(tidyverse)
 library(scales)
 library(ggcorrplot)
@@ -391,9 +390,6 @@ df_sectoral <- df_corr %>%
 # plot these as min to max
 
 df_violin <- df_sectoral %>%
-  filter(
-    !(adm0_pcode %in% c("UKR", "COL")) # need to check data first
-  ) %>%
   group_by(sector) %>%
   summarize(
     min_perc = min(pin_percent),
@@ -425,7 +421,7 @@ fig_pin_all <- df_violin %>%
       y = sector,
       label = n_country
     ),
-    x = 1.03,
+    x = 1.28,
     fontface = "bold"
   ) +
   theme_minimal() +
@@ -494,9 +490,6 @@ write_csv(
 # heat map version
 
 fig_heatmap <- df_sectoral %>%
-  filter(
-    !(adm0_pcode %in% c("UKR", "COL")) # need to check data first
-  ) %>%
   mutate(
     sector = factor(sector, levels = levels(df_violin$sector))
   )

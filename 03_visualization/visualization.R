@@ -22,11 +22,10 @@ df_pins <- read.csv(
   ) %>%
   ungroup() %>%
   mutate(
-    sector_general = case_when(
+    sector_group = case_when(
       sector_general == "intersectoral" ~ "JIAF 1.1",
-      sector_general == "sectoral" ~ "Option 1 (no adjustment)",
-      sector_general == "sectoral_cluster" ~ "Cluster totals"
-    ),
+      sector_general == "sectoral" ~ "Option 1 (no adjustment)"
+    )
   )
 
 ##################

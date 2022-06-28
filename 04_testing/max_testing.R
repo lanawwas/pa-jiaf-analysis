@@ -520,7 +520,6 @@ df_perc_pin_drop %>%
     )
   )
 
-
 ggsave(
   file.path(
     file_paths$output_dir,

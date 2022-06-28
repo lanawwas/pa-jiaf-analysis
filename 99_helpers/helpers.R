@@ -110,6 +110,12 @@ get_paths_analysis <- function() {
     "PiN"
   )
 
+  output_dir_sev <- file.path(
+    data_dir,
+    "Data analyzed",
+    "Severity"
+  )
+
   list(
     agg_dir = agg_dir,
     input_dir = file.path(agg_dir, "sectoral_pins"),
@@ -117,6 +123,7 @@ get_paths_analysis <- function() {
     input_indicator_dir = file.path(agg_dir, "indicator_pins"),
     input_sev_sector_dir = file.path(agg_dir, "sectoral_sev"),
     input_sev_indicator_dir = file.path(agg_dir, "indicator_sev"),
-    output_dir = output_dir
+    output_dir = output_dir,
+    output_dir_sev = output_dir_sev
   )
 }
