@@ -33,7 +33,7 @@ df <- read_csv(
 #### OUTPUT DATASET ####
 ########################
 
-df %>%
+df_stats <- df %>%
   filter(
     sector_general == "sectoral"
   ) %>%
@@ -65,7 +65,28 @@ df %>%
     n_sectors = n(),
     intersectoral_severity = unique(intersectoral),
     .groups = "drop"
+  )
+
+
+df_sectors <- df %>%
+  filter(
+    sector_general == "sectoral"
   ) %>%
+  select(
+    disaggregation,
+    sector,
+    severity
+  ) %>%
+  pivot_wider(
+    names_from = sector,
+    values_from = severity
+  )
+
+full_join(
+  df_stats,
+  df_sectors,
+  by = "disaggregation"
+) %>%
   write_csv(
     file.path(
       file_paths$output_dir_sev,
