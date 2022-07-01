@@ -56,9 +56,11 @@ df_stats <- df %>%
   summarize(
     mean_severity = mean(severity),
     sum_severity = sum(severity),
+    n_sectors_2_over = sum(severity >= 2),
     n_sectors_3_over = sum(severity >= 3),
     n_sectors_4_over = sum(severity >= 4),
     n_sectors_5_over = sum(severity >= 5),
+    perc_sectors_2_over = n_sectors_2_over / n(),
     perc_sectors_3_over = n_sectors_3_over / n(),
     perc_sectors_4_over = n_sectors_4_over / n(),
     perc_sectors_5_over = n_sectors_5_over / n(),
