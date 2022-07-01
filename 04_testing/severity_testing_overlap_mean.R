@@ -637,9 +637,11 @@ df_sd <- df %>%
       na.rm = TRUE
     ),
     mean_severity = unique(mean_severity),
+    n_sectors_2_over = unique(n_sectors_2_over),
     n_sectors_3_over = unique(n_sectors_3_over),
     n_sectors_4_over = unique(n_sectors_4_over),
     n_sectors_5_over = unique(n_sectors_5_over),
+    perc_sectors_2_over = unique(perc_sectors_2_over),
     perc_sectors_3_over = unique(perc_sectors_3_over),
     perc_sectors_4_over = unique(perc_sectors_4_over),
     perc_sectors_5_over = unique(perc_sectors_5_over),
@@ -929,8 +931,8 @@ df_sd %>%
   ) +
   labs(
     x = "% of sectors with severity 4+",
-    y = "% of sectors with severity 5+",
-    title = "Areas with outliers, based on sectoral overlap 4+ and 5+",
+    y = "% of sectors with severity 5",
+    title = "Areas with outliers, based on sectoral overlap 4+ and 5",
     caption = paste(
       "Only positive outliers plotted, those where sectoral severity is",
       "over 2 standard deviations above the mean."
@@ -959,7 +961,9 @@ df_outlier_stats <- df_sd %>%
   summarize(
     perc_1_sev_over_5 = sum(n_sectors_5_over > 1) / n(),
     perc_1_sev_5 = sum(n_sectors_5_over == 1) / n(),
-    perc_1_sev_4 = sum(n_sectors_4_over == 1 & n_sectors_5_over == 0) / n()
+    perc_1_sev_4 = sum(n_sectors_4_over == 1 & n_sectors_5_over == 0) / n(),
+    perc_1_sev_3 = sum(n_sectors_3_over >= 1 & n_sectors_4_over == 0) / n(),
+    perc_1_sev_2 = sum(n_sectors_2_over >= 1 & n_sectors_3_over == 0) / n(),
   ) %>%
   pivot_longer(
     everything()
@@ -1024,9 +1028,11 @@ df_outlier_stats %>%
   ) +
   scale_y_discrete(
     labels = c(
-      "1 sector in severity 4+,\nnone in 5+",
-      "Just 1 sector\nin severity 5+",
-      "More than 1 sector\nin severity 5+"
+      "1 sector in severity 2,\nnone in 3+",
+      "1 sector in severity 3,\nnone in 4+",
+      "1 sector in severity 4,\nnone in 5",
+      "Just 1 sector\nin severity 5",
+      "More than 1 sector\nin severity 5"
     )
   ) +
   geom_label(
@@ -1035,8 +1041,8 @@ df_outlier_stats %>%
       value = 0.4
     ),
     label = paste(
-      "93% of areas with outliers have either\na single sector in",
-      "severity 4 or\n1 or more sector in severity 5+."
+      "All areas with outliers have either\na single max sector in",
+      "severity 2, 3 or 4 or\n1 or more sector in severity 5."
     ),
     family = "Roboto",
     fontface = "bold",
@@ -1044,7 +1050,6 @@ df_outlier_stats %>%
     color = "white",
     label.size = 0
   )
-
 
 ggsave(
   file.path(
