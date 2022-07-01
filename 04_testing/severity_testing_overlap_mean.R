@@ -962,8 +962,8 @@ df_outlier_stats <- df_sd %>%
     perc_1_sev_over_5 = sum(n_sectors_5_over > 1) / n(),
     perc_1_sev_5 = sum(n_sectors_5_over == 1) / n(),
     perc_1_sev_4 = sum(n_sectors_4_over == 1 & n_sectors_5_over == 0) / n(),
-    perc_1_sev_3 = sum(n_sectors_3_over >= 1 & n_sectors_4_over == 0) / n(),
-    perc_1_sev_2 = sum(n_sectors_2_over >= 1 & n_sectors_3_over == 0) / n(),
+    perc_1_sev_3 = sum(n_sectors_3_over == 1 & n_sectors_4_over == 0) / n(),
+    perc_1_sev_2 = sum(n_sectors_2_over == 1 & n_sectors_3_over == 0) / n(),
   ) %>%
   pivot_longer(
     everything()
