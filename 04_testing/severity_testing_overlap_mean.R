@@ -637,7 +637,12 @@ df_sd <- df %>%
       na.rm = TRUE
     ),
     mean_severity = unique(mean_severity),
+    n_sectors_3_over = unique(n_sectors_3_over),
+    n_sectors_4_over = unique(n_sectors_4_over),
+    n_sectors_5_over = unique(n_sectors_5_over),
     perc_sectors_3_over = unique(perc_sectors_3_over),
+    perc_sectors_4_over = unique(perc_sectors_4_over),
+    perc_sectors_5_over = unique(perc_sectors_5_over),
     .groups = "drop"
   )
 
@@ -829,3 +834,235 @@ df_sd_cut %>%
     fill = "Standard deviation of\nsectoral severity",
     title = "Standard deviation of sectoral severity, by mean and overlap"
   )
+
+
+ggsave(
+  file.path(
+    file_paths$output_dir_sev,
+    "graphs",
+    "2022_sd_mean_overlap.png"
+  ),
+  height = 6,
+  width = 9,
+  units = "in"
+)
+
+write_csv(
+  df_sd_cut,
+  file.path(
+    file_paths$output_dir_sev,
+    "graphs",
+    "datasets",
+    "2022_sd_mean_overlap.csv"
+  )
+)
+
+################################################
+#### LOOK AT RELATIVE TO OVERLAP SEVERITY 5 ####
+################################################
+
+df_sd %>%
+  ggplot(
+    aes(
+      x = perc_sectors_4_over,
+      y = perc_sectors_5_over
+    )
+  ) +
+  geom_point(
+    color = "#78D9D1",
+    alpha = 0.1
+  ) +
+  geom_point(
+    data = filter(df_sd, outlier_2sd_pos),
+    color = "#F2645A"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      hjust = .5,
+      size = 22,
+      margin = margin(10, 10, 10, 10, "pt"),
+      family = "Roboto"
+    ),
+    plot.background = element_rect(
+      fill = "white"
+    ),
+    axis.text.x = element_text(
+      face = "bold",
+      margin = margin(20, 0, 20, 0, "pt"),
+      size = 10,
+      family = "Roboto"
+    ),
+    axis.text.y = element_text(
+      face = "bold",
+      margin = margin(0, 20, 0, 20, "pt"),
+      size = 10,
+      family = "Roboto"
+    ),
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(
+      size = 16,
+      family = "Roboto"
+    )
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(1)
+  ) +
+  geom_line(
+    data = data.frame(
+      perc_sectors_4_over = 0.1,
+      perc_sectors_5_over = c(0.3, 0.15)
+    ),
+    arrow = arrow(angle = 20),
+    color = "#F2645A"
+  ) +
+  geom_text(
+    data = data.frame(
+      perc_sectors_4_over = 0.1,
+      perc_sectors_5_over = .33
+    ),
+    label = "Outliers",
+    fontface = "bold",
+    family = "Roboto",
+    color = "#F2645A"
+  ) +
+  labs(
+    x = "% of sectors with severity 4+",
+    y = "% of sectors with severity 5+",
+    title = "Areas with outliers, based on sectoral overlap 4+ and 5+",
+    caption = paste(
+      "Only positive outliers plotted, those where sectoral severity is",
+      "over 2 standard deviations above the mean."
+    )
+  )
+
+ggsave(
+  file.path(
+    file_paths$output_dir_sev,
+    "graphs",
+    "2022_overlap_4_5_outliers.png"
+  ),
+  height = 8,
+  width = 12,
+  units = "in"
+)
+
+##########################################
+#### LOOK EXPLICITLY AT OUTLIER STATS ####
+##########################################
+
+df_outlier_stats <- df_sd %>%
+  filter(
+    outlier_2sd_pos
+  ) %>%
+  summarize(
+    perc_1_sev_over_5 = sum(n_sectors_5_over > 1) / n(),
+    perc_1_sev_5 = sum(n_sectors_5_over == 1) / n(),
+    perc_1_sev_4 = sum(n_sectors_4_over == 1 & n_sectors_5_over == 0) / n()
+  ) %>%
+  pivot_longer(
+    everything()
+  ) %>%
+  mutate(
+    name = as.factor(name)
+  )
+
+df_outlier_stats %>%
+  ggplot(
+    aes(
+      y = name,
+      x = value
+    )
+  ) +
+  geom_bar(
+    stat = "identity",
+    fill = "#1EBFB3",
+    width = 0.75
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      hjust = .5,
+      size = 22,
+      margin = margin(10, 10, 10, 10, "pt"),
+      family = "Roboto"
+    ),
+    plot.background = element_rect(
+      fill = "white"
+    ),
+    axis.text.x = element_text(
+      face = "bold",
+      margin = margin(20, 0, 20, 0, "pt"),
+      size = 10,
+      family = "Roboto"
+    ),
+    axis.text.y = element_text(
+      face = "bold",
+      margin = margin(0, 20, 0, 20, "pt"),
+      size = 10,
+      family = "Roboto"
+    ),
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(
+      size = 16,
+      family = "Roboto"
+    )
+  ) +
+  labs(
+    x = "% of areas with outliers",
+    y = "",
+    title = "Sectoral severity in areas with outliers",
+    caption = paste(
+      "Only positive outliers considered, those where sectoral severity is",
+      "over 2 standard deviations above the mean."
+    )
+  ) +
+  scale_x_continuous(
+    labels = scales::percent_format()
+  ) +
+  scale_y_discrete(
+    labels = c(
+      "1 sector in severity 4+,\nnone in 5+",
+      "Just 1 sector\nin severity 5+",
+      "More than 1 sector\nin severity 5+"
+    )
+  ) +
+  geom_label(
+    data = data.frame(
+      name = "perc_1_sev_over_5",
+      value = 0.4
+    ),
+    label = paste(
+      "93% of areas with outliers have either\na single sector in",
+      "severity 4 or\n1 or more sector in severity 5+."
+    ),
+    family = "Roboto",
+    fontface = "bold",
+    fill = "#888888",
+    color = "white",
+    label.size = 0
+  )
+
+
+ggsave(
+  file.path(
+    file_paths$output_dir_sev,
+    "graphs",
+    "2022_outlier_stats.png"
+  ),
+  height = 6,
+  width = 9,
+  units = "in"
+)
+
+write_csv(
+  df_outlier_stats,
+  file.path(
+    file_paths$output_dir_sev,
+    "graphs",
+    "datasets",
+    "2022_outlier_stats.csv"
+  )
+)
