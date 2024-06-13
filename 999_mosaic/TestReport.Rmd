@@ -1,0 +1,246 @@
+---
+title: "Analysis Report"
+author: "LAN"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    self_contained: true  # Set to true if you want a standalone HTML file
+    output_file: "/report.html"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Install required packages if not already installed
+if (!require("tidyverse")) {
+  install.packages("tidyverse")
+}
+if (!require("car")) {
+  install.packages("car")
+}
+if (!require("multcomp")) {
+  install.packages("multcomp")
+}
+
+if (!require("irr")) {
+  install.packages("irr")
+}
+
+if (!require("stats")) {
+  install.packages("stats")
+}
+
+# Load necessary libraries
+library(tidyverse)
+library(car)  # For ANOVA
+library(multcomp)  # For post-hoc tests
+library(irr) # For ICC
+library(stats)  # For Kolmogorov-Smirnov test
+```
+
+# Summary Statistics
+
+Summary Statistics: Mean (average value), SD (standard deviation), Median (middle value), IQR (interquartile range). These statistics provide insights into the central tendency and variability of counts across different methods and severity levels.
+
+## Interpretation
+
+The summary statistics provide a snapshot of the central tendency and variability of the counts for each method and severity level.
+
+ - Method 4:
+    - Mean counts across severity levels range from 8481 to 9492.
+    - High variability (SD) indicates fluctuating estimates.
+
+ - Method 5:
+    - Mean counts are significantly higher (14,163 to 15,963).
+    - High variability (SD), particularly for severity 3 (SD = 14,007), indicates fluctuating estimates for level3.
+
+ - Method 6:
+    - Mean counts are lower (5,073 to 5,146).
+    - Lower variability (SD) suggests a more consistent estimates.
+
+```{r summary_stats, echo=FALSE, message=FALSE}
+# Read the CSV file
+method4 <- read.csv("process/4.modified_data_highest_sector_pin.csv")
+method5 <- read.csv("process/5.OverallSeverityDistributionMosaic.csv")
+method6 <- read.csv("process/6.AverageAndMedianSeverityDistributionMosaic.csv")
+
+# View the data structure
+
+cat("Structure of the data frame:\n")
+cat("Data based on Method 4 - Maximum Sector PiN distribution")
+str(method4)
+cat("Data based on Method 5 - mosaic method stop at level3")
+str(method5)
+cat("Data based on Method 6 - Mean/Median stop at level3 (Level 3 is residual)")
+str(method6)
+
+# Standardize method5 and method6 to match method4's structure
+method5_long <- method5 %>%
+  dplyr::select(Admin.2.Pcode, dummy_pin_5_max, dummy_pin_4_max, dummy_pin_3_max) %>%
+  pivot_longer(cols = starts_with("dummy_pin_"), names_to = "Severity", values_to = "Count") %>%
+  mutate(Method = "method5", Severity = as.integer(str_extract(Severity, "\\d")))
+
+method6_long <- method6 %>%
+  dplyr::select(Admin.2.Pcode, dummy_pin_5_avg, dummy_pin_4_avg, dummy_pin_3_avg) %>%
+  pivot_longer(cols = starts_with("dummy_pin_"), names_to = "Severity", values_to = "Count") %>%
+  mutate(Method = "method6", Severity = as.integer(str_extract(Severity, "\\d")))
+
+method4_long <- method4 %>%
+  dplyr::select(Admin.2.Pcode, dummy_pin_1, dummy_pin_2, dummy_pin_3, dummy_pin_4, dummy_pin_5) %>%
+  pivot_longer(cols = starts_with("dummy_pin_"), names_to = "Severity", values_to = "Count") %>%
+  mutate(Method = "method4", Severity = as.integer(str_extract(Severity, "\\d")))
+
+# Combine all methods into a single dataframe
+combined_data <- bind_rows(method4_long, method5_long, method6_long)
+
+# View combined data
+head(combined_data)
+
+# Test 1: Summary statistics by method and severity
+summary_stats <- combined_data %>%
+  group_by(Method, Severity) %>%
+  summarise(Mean = mean(Count, na.rm = TRUE), SD = sd(Count, na.rm = TRUE), Median = median(Count, na.rm = TRUE), IQR = IQR(Count, na.rm = TRUE))
+
+print(summary_stats)
+```
+
+# Test 2: ANOVA Test
+
+## ANOVA Results:
+
+ - **The significant effect of Method (p < 2e-16) indicates significant differences between methods**
+ - **The interaction between Method and Severity is not significant (p = 0.163), suggesting that differences between methods do not vary significantly across severity levels.**
+ - **Severity alone is not significant (p = 0.637), indicating no substantial difference in counts across severity levels regardless of method.**
+
+```{r anova, echo=FALSE}
+# Test 2:  Perform ANOVA
+anova_result <- aov(Count ~ Method * Severity, data = combined_data)
+summary(anova_result)
+```
+
+
+Footnote: ANOVA: Method tests for significant differences between methods; Severity examines differences across severity levels; Method:Severity tests for interaction effects; Residuals represent unexplained variation.
+
+# Test 3: Visulization
+
+## Visualizations
+
+  - Boxplot: Shows the distribution of counts by method and severity level.
+    - Method 5 tends to have higher counts and **wider variability**.
+    - Method 6 shows more **consistent** counts with **lower median values**.
+    - Method 4 shows intermediate counts with **moderate variability**.
+
+  - Density Plot: Illustrates the distribution of counts across methods for each severity level.
+    - Distinct distributions are observed, supporting the K-S test results indicating significant differences between methods.
+
+
+```{r visulization, echo=FALSE}
+# Boxplot
+ggplot(combined_data, aes(x = as.factor(Severity), y = Count, fill = Method)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Counts by Method and Severity Level", x = "Severity Level", y = "Count")
+
+# Density plot
+ggplot(combined_data, aes(x = Count, fill = Method)) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~ Severity) +
+  labs(title = "Density Plot of Counts by Method and Severity Level", x = "Count", y = "Density")
+```
+
+Footnote: Visualizations: Boxplot provides distribution characteristics by severity and method; Density plot illustrates density distribution for each method and severity level.
+
+# Test 4: Goodness-of-fit test (Chi-squared test)
+
+## Goodness-of-Fit (Chi-squared)
+
+    Chi-squared Results:
+        Method 4: ChiSq = 57,820
+        Method 5: ChiSq = 2,886,028
+        Method 6: ChiSq = 2,213,240
+
+```{r chi, echo=FALSE}
+# Calculate expected frequencies based on overall mean
+expected_counts <- combined_data %>%
+  group_by(Severity) %>%
+  summarise(Expected = mean(Count, na.rm = TRUE))
+
+# Join with the combined data
+combined_data <- combined_data %>%
+  left_join(expected_counts, by = "Severity")
+
+# Calculate chi-squared goodness-of-fit for each method and severity
+gof_results <- combined_data %>%
+  group_by(Method, Severity) %>%
+  summarise(Observed = sum(Count, na.rm = TRUE),
+            Expected = sum(Expected, na.rm = TRUE)) %>%
+  mutate(ChiSq = (Observed - Expected)^2 / Expected) %>%
+  summarise(ChiSq = sum(ChiSq))
+
+print(gof_results)
+```
+
+# Test 5: Perform Kolmogorov-Smirnov test between methods
+
+## Kolmogorov-Smirnov Test
+
+    P-values:
+        Method4 vs Method5: p = 1.535949e-60
+        Method4 vs Method6: p = 1.049617e-23
+        Method5 vs Method6: p = 4.517653e-91
+
+### Interpretation:
+  - All p-values are extremely low, indicating significant differences between the distributions of counts for all method pairs.
+  - **This suggests that the distributions generated by the three methods are statistically different from each other**
+
+```{r kolo, echo=FALSE}
+ks_results <- list()
+
+methods <- unique(combined_data$Method)
+
+for (i in 1:(length(methods) - 1)) {
+  for (j in (i + 1):length(methods)) {
+    method1 <- combined_data %>% filter(Method == methods[i]) %>% pull(Count)
+    method2 <- combined_data %>% filter(Method == methods[j]) %>% pull(Count)
+    ks_test <- ks.test(method1, method2)
+    ks_results[[paste(methods[i], methods[j], sep = "_vs_")]] <- ks_test$p.value
+  }
+}
+
+# Print Kolmogorov-Smirnov test results
+ks_results
+```
+
+Footnote: Kolmogorov-Smirnov Test: P-values indicate whether distributions between methods are significantly different. Lower values suggest significant differences.
+
+# Test 6: Intraclass correlation coefficient (ICC)
+
+## Intraclass Correlation Coefficient (ICC)
+
+    ICC Result:
+        ICC = 0.686 (95% CI: 0.653 - 0.717)
+        F-Test p-value: 2.95e-130
+
+### Interpretation:
+  - An ICC value of 0.686 indicates **good consistency** among the methods, though not excellent (generally, >0.75 is considered excellent).
+  - The confidence interval suggests that the consistency is **reliably above moderate**.
+
+
+```{r icc, echo=FALSE}
+# Test 6: Convert combined data to wide format for ICC calculation
+combined_wide <- combined_data %>%
+  pivot_wider(names_from = Method, values_from = Count) %>%
+  dplyr::select(-c(Admin.2.Pcode, Severity))
+
+# Intraclass correlation coefficient (ICC)
+icc_result <- icc(combined_wide, model = "twoway", type = "consistency", unit = "average")
+print(icc_result)
+```
+
+Footnote: Intraclass Correlation Coefficient (ICC): ICC values assess consistency among methods. Higher values (>0.75) indicate better agreement.
+
+# Overall Conclusion
+
+  - Method 4 shows **intermediate variability**.
+  - Method 5 generates higher counts with **significant variability**, which might be desirable for the context. 
+  - Method 6 offers lower counts with **more consistency**, less variability than method 5, which could be advantageous if stability is a priority.
+
+**Ultimately, the choice of the most appropriate method depends on the experts opinion and the context and criteria such as fit, consistency, and count levels**
