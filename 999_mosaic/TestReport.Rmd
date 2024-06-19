@@ -41,6 +41,8 @@ library(stats)  # For Kolmogorov-Smirnov test
 
 - Summary Statistics: Mean (average value), SD (standard deviation), Median (middle value), IQR (interquartile range). These statistics provide insights into the central tendency and variability of counts across different methods and severity levels.
 
+- Given the differences in how the methods aggregate PiN at Admin2, a statistically sound approach would be to use a summary statistic that captures the central tendency and variability appropriately. Instead of focusing solely on the mean or sum, a combination of median and interquartile range (IQR) can provide a more robust measure that is less affected by outliers and more comparable across different methods.
+
 - High variability (SD) indicates fluctuating estimates.
 - Lower variability (SD) suggests a more consistent estimates.
 
@@ -66,10 +68,15 @@ method5_long <- method5 %>%
   pivot_longer(cols = starts_with("dummy_pin_"), names_to = "Severity", values_to = "Count") %>%
   mutate(Method = "method5", Severity = as.integer(str_extract(Severity, "\\d")))
 
-method6_long <- method6 %>%
+method6_avg_long <- method6 %>%
   dplyr::select(Admin.2.Pcode, dummy_pin_5_avg, dummy_pin_4_avg, dummy_pin_3_avg) %>%
   pivot_longer(cols = starts_with("dummy_pin_"), names_to = "Severity", values_to = "Count") %>%
-  mutate(Method = "method6", Severity = as.integer(str_extract(Severity, "\\d")))
+  mutate(Method = "method6_avg", Severity = as.integer(str_extract(Severity, "\\d")))
+
+method6_median_long <- method6 %>%
+  dplyr::select(Admin.2.Pcode, dummy_pin_5_median, dummy_pin_4_median, dummy_pin_3_median) %>%
+  pivot_longer(cols = starts_with("dummy_pin_"), names_to = "Severity", values_to = "Count") %>%
+  mutate(Method = "method6_median", Severity = as.integer(str_extract(Severity, "\\d")))
 
 method4_long <- method4 %>%
   dplyr::select(Admin.2.Pcode, dummy_pin_3, dummy_pin_4, dummy_pin_5) %>%
@@ -77,15 +84,22 @@ method4_long <- method4 %>%
   mutate(Method = "method4", Severity = as.integer(str_extract(Severity, "\\d")))
 
 # Combine all methods into a single dataframe
-combined_data <- bind_rows(method4_long, method5_long, method6_long)
+combined_data <- bind_rows(method4_long, method5_long, method6_avg_long, method6_median_long)
 
 # View combined data
 #head(combined_data)
 
 # Test 1: Summary statistics by method and severity
+stats <- combined_data %>%
+  group_by(Method) %>%
+  summarise(SD = sd(Count, na.rm = TRUE), Median = median(Count, na.rm = TRUE), SumPiN = formatC(sum(Count, na.rm = TRUE), format = "f", big.mark = ","), IQR = IQR(Count, na.rm = TRUE), .groups = 'keep')
+
+print(stats)
+
+# Test 1: Summary statistics by method and severity
 summary_stats <- combined_data %>%
   group_by(Method, Severity) %>%
-  summarise(Mean = mean(Count, na.rm = TRUE), SD = sd(Count, na.rm = TRUE), Median = median(Count, na.rm = TRUE), IQR = IQR(Count, na.rm = TRUE))
+  summarise(Mean = mean(Count, na.rm = TRUE), SD = sd(Count, na.rm = TRUE), Median = median(Count, na.rm = TRUE), Sum = formatC(sum(Count, na.rm = TRUE), format = "f", big.mark = ","), IQR = IQR(Count, na.rm = TRUE), .groups = 'keep')
 
 print(summary_stats)
 
@@ -95,42 +109,52 @@ print(summary_stats)
 
 ## Visualizations
 
-  - Boxplot: Shows the distribution of PiN by method and severity level.
-  - Density Plot: Illustrates the distribution of PiN across methods for      each severity level.
+  - Boxplot: 
+    - The boxplot visualizes the distribution of the population in need (PiN) at the Admin2 level for each severity level and each method (Method 4, Method 5, Method 6_avg, Method 6_median). 
+    - Each boxplot displays the median, interquartile range (IQR), and potential outliers. The median represents the central value of the distribution, while the IQR shows the spread of the middle 50% of the data. This approach highlights the distribution and variability within each method.
+  - Density Plot: Illustrates the distribution of PiN across methods for each severity level.
   
 
 ```{r visulization, echo=FALSE}
-# Calculate the sum of PiN for each Admin2 combination of Severity and Method
+# Calculate the PiN in Admin2 in each Severity level - 3 Methods
 sum_data <- combined_data %>%
-  group_by(Admin.2.Pcode, Severity, Method) %>%
+  group_by(Severity, Method) %>%
   summarise(Sum = sum(Count), .groups = "drop")
 # head(sum_data)
 
 # Create a bar chart
-ggplot(sum_data, aes(x = Severity, y = Sum, fill = Method)) +
+ggplot(sum_data, aes(x = Severity, y = Sum/ 1000000, fill = Method)) +
   geom_bar(stat = "identity", position = "dodge") +
+  #facet_grid(~ Severity) +
   labs(
-    title = "Total Number of PiN in Admin2 by Severity Level and Method",
+    title = "Total PiN in Admin2 by Severity Level and Method",
     x = "Severity Level",
-    y = "Total Number of People",
+    y = "Total PiN in [Millions]",
     fill = "Method"
   ) +
-  scale_fill_discrete(labels = c("Method 4", "Method 5", "Method 6")) +
-  theme_minimal()
-
+  scale_fill_discrete(labels = c("Method 4", "Method 5", "Method 6_avg", "Method 6_median")) +
+ theme(strip.background = element_rect(colour="grey", fill="grey", 
+                                       linewidth=1.5, linetype="solid"))
 # Boxplot
 ggplot(combined_data, aes(x = as.factor(Severity), y = Count, fill = Method)) +
   geom_boxplot() +
   labs(title = "Distribution of Counts by Method and Severity Level", x = "Severity Level", y = "Count")
 
+# Create a scatter plot
+ggplot(combined_data, aes(x = Admin.2.Pcode, y = Count, color = Severity)) +
+  geom_point() +
+  facet_grid(~ Method) +
+  labs(x = "Admin2", y = "PiN", color = "Severity") +
+  scale_color_gradientn(colors = rev(RColorBrewer::brewer.pal(11, "RdYlBu"))) +
+  theme(strip.background = element_rect(colour="grey", fill="grey", 
+                                       linewidth=1.5, linetype="solid"))
+
 # Density plot
 ggplot(combined_data, aes(x = Count, fill = Method)) +
   geom_density(alpha = 0.5) +
   facet_wrap(~ Severity) +
-  labs(title = "Density Plot of Counts by Method and Severity Level", x = "Count", y = "Density")
+  labs(title = "Density Plot of Counts by Method and Severity Level", x = "PiN", y = "Density")
 ```
-
-Footnote: Visualizations: Boxplot provides distribution characteristics by severity and method; Density plot illustrates density distribution for each method and severity level.
 
 # Test 3: ANOVA Test
 
@@ -145,6 +169,14 @@ Footnote: Visualizations: Boxplot provides distribution characteristics by sever
 # Test 2:  Perform ANOVA
 anova_result <- aov(Count ~ Method * Severity, data = combined_data)
 summary(anova_result)
+
+# Interaction Plot
+interaction.plot(combined_data$Severity, combined_data$Method, combined_data$Count,
+                 main = "Interaction Plot: Method and Severity Level",
+                 xlab = "Severity Level",
+                 ylab = "Count",
+                 legend = TRUE)
+
 ```
 
 
