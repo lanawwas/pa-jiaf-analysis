@@ -22,17 +22,23 @@ highest_pin_sectors <- data %>%
 # Check the structure of the data
 str(highest_pin_sectors)
 
-# Step 2: Combine '1' and '2', and add them to '3'
+# Step 2: Combine '1' and '2', and add them to '3_residual'
 highest_pin_sectors_new <- highest_pin_sectors %>%
   group_by(Admin.2.Pcode) %>%
   mutate(
-    across(ends_with("3"), ~ .x + coalesce(rowSums(across(ends_with(c("1", "2")))), 0), .names = "{.col}")
+    across(ends_with("3"), ~ .x + coalesce(rowSums(across(ends_with(c("1", "2")))), 0), .names = "{.col}_residual")
   ) %>%
-  dplyr::select(-ends_with(c("1", "2"))) %>%
+  #dplyr::select(-ends_with(c("1", "2"))) %>%
   ungroup()
 
+# Step 3: Express the values stored in each severity level column as a percentage of the overall PiN
+highest_pin_sectors_final <- highest_pin_sectors_new %>%
+  mutate(
+    across(contains("_"), ~ .x / pin * 100, .names = "{.col}_percentage")
+  )
+
 # Check the structure of the data
-str(highest_pin_sectors_new)
+str(highest_pin_sectors_final)
 
 # Save the updated data with percentages to a new CSV file
-write.csv(highest_pin_sectors_new, "process/4.modified_data_highest_sector_pin.csv", row.names = FALSE)
+write.csv(highest_pin_sectors_final, "process/4.modified_data_highest_sector_pin.csv", row.names = FALSE)

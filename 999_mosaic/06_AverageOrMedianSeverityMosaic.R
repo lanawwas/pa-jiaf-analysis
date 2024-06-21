@@ -25,13 +25,13 @@ avg_median_pin_severity <- data %>%
     across(ends_with("5"), ~ mean(as.numeric(.), na.rm = TRUE), .names = "{.col}_avg"),
     across(ends_with("4"), ~ mean(as.numeric(.), na.rm = TRUE), .names = "{.col}_avg"),
     across(ends_with("3"), ~ mean(as.numeric(.), na.rm = TRUE), .names = "{.col}_avg"),
-    #across(ends_with("2"), ~ mean(as.numeric(.), na.rm = TRUE), .names = "{.col}_avg"),
-    #across(ends_with("1"), ~ mean(as.numeric(.), na.rm = TRUE), .names = "{.col}_avg"),
+    across(ends_with("2"), ~ mean(as.numeric(.), na.rm = TRUE), .names = "{.col}_avg"),
+    across(ends_with("1"), ~ mean(as.numeric(.), na.rm = TRUE), .names = "{.col}_avg"),
     across(ends_with("5"), ~ median(as.numeric(.), na.rm = TRUE), .names = "{.col}_median"),
     across(ends_with("4"), ~ median(as.numeric(.), na.rm = TRUE), .names = "{.col}_median"),
     across(ends_with("3"), ~ median(as.numeric(.), na.rm = TRUE), .names = "{.col}_median"),
-    #across(ends_with("2"), ~ median(as.numeric(.), na.rm = TRUE), .names = "{.col}_median"),
-    #across(ends_with("1"), ~ median(as.numeric(.), na.rm = TRUE), .names = "{.col}_median"),
+    across(ends_with("2"), ~ median(as.numeric(.), na.rm = TRUE), .names = "{.col}_median"),
+    across(ends_with("1"), ~ median(as.numeric(.), na.rm = TRUE), .names = "{.col}_median"),
     overall_pin = max(pin, na.rm = TRUE)
   ) %>%
   ungroup()
@@ -50,13 +50,23 @@ avg_median_pin_severity_adjusted <- avg_median_pin_severity %>%
 # Step 3: Calculate the PiN for severity level 3 using the adjusted formula
 avg_median_pin_severity <- avg_median_pin_severity_adjusted %>%
   mutate(
-    across(ends_with("3_avg"), ~ (overall_pin - (severity5_avg_sum + severity4_avg_sum)), .names = "{.col}"),
-    across(ends_with("3_median"), ~ (overall_pin - (severity5_median_sum + severity4_median_sum)), .names = "{.col}")
+    across(ends_with("3_avg"), ~ (overall_pin - (severity5_avg_sum + severity4_avg_sum)), .names = "{.col}_residual"),
+    across(ends_with("3_median"), ~ (overall_pin - (severity5_median_sum + severity4_median_sum)), .names = "{.col}_residual")
   ) %>%
   dplyr::select(-severity5_avg_sum, -severity4_avg_sum, -severity5_median_sum, -severity4_median_sum) # Drop the sum columns as they are no longer needed
 
 # Print the resulting dataframe
 print(avg_median_pin_severity)
+
+# Step 3: Express the values stored in each severity level column as a percentage of the overall PiN
+severity_distribution_final <- avg_median_pin_severity %>%
+  mutate(
+    across(contains("_"), ~ .x / overall_pin * 100, .names = "{.col}_percentage")
+  )%>%
+  dplyr::select(-overall_pin_percentage)
+
+# Print the result
+print(severity_distribution_final)
 
 # Combine average and median results for final output
 #final_severity_distribution <- avg_median_pin_severity %>%
@@ -66,4 +76,4 @@ print(avg_median_pin_severity)
 #print(final_severity_distribution)
 
 # Save the updated data with percentages to a new CSV file
-write.csv(avg_median_pin_severity, "process/6.AverageAndMedianSeverityDistributionMosaic.csv", row.names = FALSE)
+write.csv(severity_distribution_final, "process/6.AverageAndMedianSeverityDistributionMosaic.csv", row.names = FALSE)

@@ -29,12 +29,24 @@ if (!require("stats")) {
   install.packages("stats")
 }
 
+if (!require("psych")) {
+  install.packages("psych")
+}
+
+if (!require("corrplot")) {
+  install.packages("corrplot")
+}
+
 # Load necessary libraries
 library(tidyverse)
 library(car)  # For ANOVA
 library(multcomp)  # For post-hoc tests
 library(irr) # For ICC
+library(psych) # For ICC psych to handle NA
+library(irrNA) # For ICC irrNA to handle NA
+library(corrplot) # For Corrlation plot 
 library(stats)  # For Kolmogorov-Smirnov test
+
 ```
 
 # Summary Statistics
@@ -64,22 +76,26 @@ method6 <- read.csv("process/6.AverageAndMedianSeverityDistributionMosaic.csv")
 
 # Standardize method5 and method6 and method4's structure
 method5_long <- method5 %>%
-  dplyr::select(Admin.2.Pcode, dummy_pin_5_max, dummy_pin_4_max, dummy_pin_3_max) %>%
+  dplyr::select(Admin.2.Pcode, dummy_pin_5_max, dummy_pin_4_max, dummy_pin_3_max, dummy_pin_2_max, dummy_pin_1_max, #dummy_pin_3_max_residual 
+                )%>%
   pivot_longer(cols = starts_with("dummy_pin_"), names_to = "Severity", values_to = "Count") %>%
   mutate(Method = "method5", Severity = as.integer(str_extract(Severity, "\\d")))
 
 method6_avg_long <- method6 %>%
-  dplyr::select(Admin.2.Pcode, dummy_pin_5_avg, dummy_pin_4_avg, dummy_pin_3_avg) %>%
+  dplyr::select(Admin.2.Pcode, overall_pin,dummy_pin_5_avg, dummy_pin_4_avg, dummy_pin_3_avg, dummy_pin_2_avg, dummy_pin_1_avg, #dummy_pin_3_avg_residual
+                )%>%
   pivot_longer(cols = starts_with("dummy_pin_"), names_to = "Severity", values_to = "Count") %>%
   mutate(Method = "method6_avg", Severity = as.integer(str_extract(Severity, "\\d")))
 
 method6_median_long <- method6 %>%
-  dplyr::select(Admin.2.Pcode, dummy_pin_5_median, dummy_pin_4_median, dummy_pin_3_median) %>%
+  dplyr::select(Admin.2.Pcode, dummy_pin_5_median, dummy_pin_4_median, dummy_pin_3_median, dummy_pin_2_median, dummy_pin_1_median, #dummy_pin_3_median_residual
+                )%>%
   pivot_longer(cols = starts_with("dummy_pin_"), names_to = "Severity", values_to = "Count") %>%
   mutate(Method = "method6_median", Severity = as.integer(str_extract(Severity, "\\d")))
 
 method4_long <- method4 %>%
-  dplyr::select(Admin.2.Pcode, dummy_pin_3, dummy_pin_4, dummy_pin_5) %>%
+  dplyr::select(Admin.2.Pcode, dummy_pin_3, dummy_pin_4, dummy_pin_5, dummy_pin_2, dummy_pin_1, #dummy_pin_3_residual
+                ) %>%
   pivot_longer(cols = starts_with("dummy_pin_"), names_to = "Severity", values_to = "Count") %>%
   mutate(Method = "method4", Severity = as.integer(str_extract(Severity, "\\d")))
 
@@ -99,10 +115,9 @@ print(stats)
 # Test 1: Summary statistics by method and severity
 summary_stats <- combined_data %>%
   group_by(Method, Severity) %>%
-  summarise(Mean = mean(Count, na.rm = TRUE), SD = sd(Count, na.rm = TRUE), Median = median(Count, na.rm = TRUE), Sum = formatC(sum(Count, na.rm = TRUE), format = "f", big.mark = ","), IQR = IQR(Count, na.rm = TRUE), .groups = 'keep')
+  summarise(Mean = mean(Count, na.rm = TRUE), SD = sd(Count, na.rm = TRUE), Median = median(Count, na.rm = TRUE), Sum = formatC(sum(Count, na.rm = FALSE), format = "f", big.mark = ","), IQR = IQR(Count, na.rm = TRUE), .groups = 'keep')
 
 print(summary_stats)
-
 ```
 
 # Test 2: Visulization
@@ -236,6 +251,12 @@ ks_results
 ## Intraclass Correlation Coefficient (ICC)
 
 - Intraclass Correlation Coefficient (ICC): ICC values assess consistency among methods. Higher values (>0.75) indicate better agreement.
+-The results from second ICC provide information about different types of Intraclass Correlation Coefficients (ICCs) handling NAN case. 
+- ICC Types:
+  - ICC1 and ICC1k: Single and average measures for absolute agreement
+  - ICC2 and ICC2k: Single and average measures for random raters
+  - ICC3 and ICC3k: Single and average measures for fixed raters
+
 
 ```{r icc, echo=FALSE}
 # Test 6: Convert combined data to wide format for ICC calculation
@@ -246,6 +267,24 @@ combined_wide <- combined_data %>%
 # Intraclass correlation coefficient (ICC)
 icc_result <- icc(combined_wide, model = "twoway", type = "consistency", unit = "average")
 print(icc_result)
+
+# Calculate ICC using psych package
+icc_result <- ICC(combined_wide, missing = TRUE)
+print(icc_result)
+
+# Calculate ICC using irrNA package
+#icc_result_irrNA <- iccNA(combined_wide)
+#print("ICC result using irrNA package:")
+#print(icc_result_irrNA)
+
+# Correlation matrix
+#cor_matrix <- cor(combined_wide, use = "pairwise.complete.obs")
+#print("Correlation matrix:")
+#print(cor_matrix)
+
+# Pairwise scatterplots
+#pairs(combined_wide, lower.panel = NULL, pch = 19, cex = 0.5)
+
 ```
 
 # Overall Conclusion
